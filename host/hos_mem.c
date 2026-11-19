@@ -330,8 +330,10 @@ int hos_mem_mapped(uint64_t addr, uint64_t n) {
 void hos_mark_written(const void *p, size_t n) {
     const uintptr_t a = (uintptr_t)p - (uintptr_t)A64_MEM;
     if (!n || (uintptr_t)p < (uintptr_t)A64_MEM || a >= HOS_GUEST_SPACE) return;
-    for (uintptr_t q = a >> 12; q <= (a + n - 1) >> 12 && q < A64_DIRTY_PAGES; q++)
+    for (uintptr_t q = a >> 12; q <= (a + n - 1) >> 12 && q < A64_DIRTY_PAGES; q++) {
         __atomic_store_n(&a64_dirty[q], 1, __ATOMIC_RELEASE);
+        __atomic_store_n(&a64_dirty_sum[q >> 8], 1, __ATOMIC_RELEASE);   /* (Tweek: after the page's mark, see collect_in) */
+    }
 }
 #endif
 

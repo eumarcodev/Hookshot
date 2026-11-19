@@ -58,6 +58,9 @@ MARK_NATIVE = r"""extern uint8_t a64_dirty[1u << 20];
 #define A64_MARK(a, n) (__atomic_store_n(&a64_dirty[(uint32_t)(a) >> 12], 1, __ATOMIC_RELEASE), \
                         __atomic_store_n(&a64_dirty[(uint32_t)((a) + (n) - 1) >> 12], 1, __ATOMIC_RELEASE))"""
 MARK_NATIVE_64 = r"""extern uint8_t a64_dirty[A64_DIRTY_PAGES];
+/* (Tweek) a byte for each 256 pages, set after any of their marks: the collection (host/rx_backend.c collect_in) skips a
+   chunk whose byte is clear, and clears it (an exchange) before it reads the chunk's pages */
+extern uint8_t a64_dirty_sum[A64_DIRTY_PAGES >> 8];
 /* (Tried 2026-10-21: reading a mark first and writing it only when clear, against cache lines moving between cores:
    game threads +1.1 ms a frame, the code 18 MB bigger. Not kept.) */
 #define A64_DIRTY_AT(a) (((uint64_t)(a) >> 12) & (A64_DIRTY_PAGES - 1))
@@ -69,10 +72,14 @@ extern uint8_t a64_gpu_pages[A64_DIRTY_PAGES / 8];
 #define A64_GPU_PAGE(a) ((a64_gpu_pages[A64_DIRTY_AT(a) >> 3] >> (A64_DIRTY_AT(a) & 7)) & 1)
 #define A64_MARK(a, n) (A64_GPU_PAGE(a) ? \
                         (void)(__atomic_store_n(&a64_dirty[A64_DIRTY_AT(a)], 1, __ATOMIC_RELEASE), \
-                               __atomic_store_n(&a64_dirty[A64_DIRTY_AT((a) + (n) - 1)], 1, __ATOMIC_RELEASE)) : (void)0)
+                               __atomic_store_n(&a64_dirty[A64_DIRTY_AT((a) + (n) - 1)], 1, __ATOMIC_RELEASE), \
+                               __atomic_store_n(&a64_dirty_sum[A64_DIRTY_AT(a) >> 8], 1, __ATOMIC_RELEASE), \
+                               __atomic_store_n(&a64_dirty_sum[A64_DIRTY_AT((a) + (n) - 1) >> 8], 1, __ATOMIC_RELEASE)) : (void)0)
 #else
 #define A64_MARK(a, n) (__atomic_store_n(&a64_dirty[A64_DIRTY_AT(a)], 1, __ATOMIC_RELEASE), \
-                        __atomic_store_n(&a64_dirty[A64_DIRTY_AT((a) + (n) - 1)], 1, __ATOMIC_RELEASE))
+                        __atomic_store_n(&a64_dirty[A64_DIRTY_AT((a) + (n) - 1)], 1, __ATOMIC_RELEASE), \
+                        __atomic_store_n(&a64_dirty_sum[A64_DIRTY_AT(a) >> 8], 1, __ATOMIC_RELEASE), \
+                        __atomic_store_n(&a64_dirty_sum[A64_DIRTY_AT((a) + (n) - 1) >> 8], 1, __ATOMIC_RELEASE))
 #endif"""
 
 SUBST = {
@@ -86,7 +93,7 @@ SUBST = {
     "a64_rt.c": [
         (LOOKUP, "#if A64_ADDR64\n    if (addr >> 32) return NULL;   /* (code lies below 4 GB: never a truncated match) */\n"
                  "#endif\n" + LOOKUP),
-        ("uint8_t a64_dirty[1u << 20];", "uint8_t a64_dirty[A64_DIRTY_PAGES];"),
+        ("uint8_t a64_dirty[1u << 20];", "uint8_t a64_dirty[A64_DIRTY_PAGES];\nuint8_t a64_dirty_sum[A64_DIRTY_PAGES >> 8];"),
     ],
 }
 
