@@ -12,8 +12,7 @@ has it, with stand-ins for the guest window, and checks:
   3. a range that covers part of a chunk collects the marked pages inside it and leaves the summary set, so a later
      collection of the whole chunk still finds the pages outside the first range;
   4. a mark made after a chunk's summary was cleared (the race the store order covers: page, then summary) is found by the
-     next collection;
-  5. HOS_DIRTY_SUM=0 reads every page as before, summary or not.
+     next collection.
 
 The source's own text is checked too: the lifted stores' mark (both A64_MARK forms in nx2/rtgen.py) and hos_mark_written
 store the page's mark before the summary, and collect_in exchanges the summary before it reads the pages.
@@ -146,23 +145,9 @@ def main():
             print(r.stdout + r.stderr)
             print("FAIL: the fixture does not compile")
             return 1
-        rc = 0
-        for env in ({}, {"HOS_DIRTY_SUM": "0"}):
-            e = dict(os.environ, **env)
-            r = subprocess.run([str(exe)], capture_output=True, text=True, env=e)
-            label = "HOS_DIRTY_SUM=0" if env else "default"
-            out = r.stdout.strip()
-            if env:
-                # (5: with the summary off every page is read, so case 2's page without a summary is collected: the one
-                # expected difference)
-                ok = "a chunk with a clear summary skipped" in out and out.count("FAIL") == 1
-            else:
-                ok = r.returncode == 0
-            print("%s: %s" % (label, "ok" if ok else "FAILED"))
-            if not ok:
-                print(out)
-                rc = 1
-        return rc
+        r = subprocess.run([str(exe)], capture_output=True, text=True)
+        print(r.stdout.strip())
+        return 0 if r.returncode == 0 else 1
 
 
 if __name__ == "__main__":

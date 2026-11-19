@@ -95,8 +95,6 @@ static int cmp_range_lo(const void *a, const void *b) {
 }
 extern uint8_t a64_dirty_sum[];
 static int64_t collect_in(const uint64_t (*ranges)[2], int nranges, uint32_t **pages) {
-    static int sum_on = -1;
-    if (sum_on < 0) { const char *e = getenv("HOS_DIRTY_SUM"); sum_on = !(e && e[0] == '0'); }
     size_t n = 0, cap = 4096;
     uint32_t *out = malloc(cap * sizeof *out);
     /* two changes to the clean-span walk, both measured in Hyrule Field at play (Hyrule Field spin, i9-13900K,
@@ -129,11 +127,11 @@ static int64_t collect_in(const uint64_t (*ranges)[2], int nranges, uint32_t **p
         if (p1 > A64_DIRTY_PAGES) p1 = A64_DIRTY_PAGES;
         if (p1 <= upto) continue;
         for (uint64_t p = lo >> 12 < upto ? upto : lo >> 12; p < p1;) {
-            /* (Tweek, HOS_DIRTY_SUM: on; =0 as before) a whole chunk of 256 pages: skipped when its summary byte is clear (no
+            /* (Tweek) a whole chunk of 256 pages: skipped when its summary byte is clear (no
                mark since its last whole scan), else the byte cleared first (an exchange: a full barrier) and the chunk read
                as before. A mark's page store comes before its summary store, so a mark the reads below miss sets the byte
                again after the exchange, and the next collection reads it. A part of a chunk leaves the byte as it is. */
-            if (!(p & 255) && p + 256 <= p1 && sum_on) {
+            if (!(p & 255) && p + 256 <= p1) {
                 if (!__atomic_load_n(&a64_dirty_sum[p >> 8], __ATOMIC_ACQUIRE)) {
                     p += 256;
                     continue;
