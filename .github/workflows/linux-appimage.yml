@@ -176,7 +176,21 @@ jobs:
             || contains(env.RELEASE_TAG, '-') && 'rc' || 'latest' }}
         run: scripts/linux/appimage.sh
 
-      # (the object cache down to the objects this build used, as nx2/make_game.py prune_object_cache does: each object in
+      # (AMD FSR 4's Linux side, a build option the AppImage leaves off (gpu/vk/vk_fsr4.cpp: dlopen, the older backend
+      # description, the unit exposure; the descriptor buffers in vk_main.cpp): the renderer compiled the way a player's
+      # build does, since the AppImage carries none (scripts/linux/appimage.sh), with the object cache above restored in its
+      # work folder. The AppImage is not changed)
+      - name: hookshot_vk.so with AMD FSR 4 (build check)
+        shell: bash   # (this container's default is sh, which has no PIPESTATUS)
+        run: |
+          D="$PWD/build-linux/deps"
+          OOT_WORK="$PWD/build-linux/vk-work" EMSDK="$D/emsdk" RX_CPM="$D/cpm" RX_MARCH=x86-64-v3 RX_VK_ONLY=1 RX_RELEASE=1 HOOKSHOT_FSR=1             "$D/python/bin/python3" -I nx2/build.py --standalone --jobs "$(nproc)" |
+            tee "$RUNNER_TEMP/vk-fsr.log"
+          test "${PIPESTATUS[0]}" -eq 0
+          grep -q "with AMD FSR 4" "$RUNNER_TEMP/vk-fsr.log"
+          test -f build-linux/vk-work/sa/build/hookshot_vk.so
+
+      # (the object cache, after the renderer's build check above, down to the objects this build used, as nx2/make_game.py prune_object_cache does: each object in
       # sa/build/obj names its key in <obj>.sha1. Nothing goes when no stamp is found)
       - name: Object cache for pull requests
         if: env.RELEASE_TAG == ''
@@ -199,22 +213,6 @@ jobs:
         with:
           path: build-linux/vk-work/objcache
           key: ${{ steps.objkey.outputs.key }}
-
-      # (AMD FSR 4's Linux side, a build option the AppImage leaves off (gpu/vk/vk_fsr4.cpp: dlopen, the older backend
-      # description, the unit exposure; the descriptor buffers in vk_main.cpp): built once more in a copy of the back end's
-      # work folder, where only vk_fsr4.cpp compiles again. The AppImage above is not changed)
-      - name: hookshot_vk.so with AMD FSR 4 (build check)
-        shell: bash   # (this container's default is sh, which has no PIPESTATUS)
-        run: |
-          cp -r build-linux/vk-work "$RUNNER_TEMP/vk-fsr"
-          rm -f "$RUNNER_TEMP/vk-fsr/sa/build/hookshot_vk.so"   # (the AppImage's own, without FSR: the test below is this build's)
-          D="$PWD/build-linux/deps"
-          OOT_WORK="$RUNNER_TEMP/vk-fsr" EMSDK="$D/emsdk" RX_CPM="$D/cpm" RX_MARCH=x86-64-v3 RX_VK_ONLY=1 RX_RELEASE=1 HOOKSHOT_FSR=1 \
-            "$D/python/bin/python3" -I nx2/build.py --standalone --jobs "$(nproc)" |
-            tee "$RUNNER_TEMP/vk-fsr.log"
-          test "${PIPESTATUS[0]}" -eq 0
-          grep -q "with AMD FSR 4" "$RUNNER_TEMP/vk-fsr.log"
-          test -f "$RUNNER_TEMP/vk-fsr/sa/build/hookshot_vk.so"
 
       # (a release's or the nightly's files, signed as built by this run: gh attestation verify <file> -R <this repository>)
       - if: env.RELEASE_TAG != '' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
