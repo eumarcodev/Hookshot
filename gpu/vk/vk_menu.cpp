@@ -6446,6 +6446,7 @@ void menu_shown_output(uint32_t* w, uint32_t* h) {
     const Out o = shown_output();
     *w = o.w, *h = o.h;
 }
+void menu_game_size(float scale, uint32_t* w, uint32_t* h) { game_size(scale, *w, *h); }
 bool resolution_auto() { return opts.resolution == 0; }
 int resolution_scale() {
     const int drawn = ur::snap_render(upscaler(), opts.resolution);
