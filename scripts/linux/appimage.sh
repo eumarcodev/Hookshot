@@ -208,18 +208,19 @@ cp assets/hookshot.png "$APPDIR/usr/share/icons/hicolor/256x256/apps/hookshot.pn
 
 # (the update list, beside AppRun and not inside a hashed part: hookshot-linux.txt names each part's checksum)
 # (the parts are served from the linux-parts release of the repository this is built in, where
-# scripts/linux/publish_parts.sh uploads them: without --base the list named NotRexed/Hookshot's release, which a fork's
+# scripts/linux/publish_parts.sh uploads them: without --base the list named the main repository's release, which a fork's
 # CI does not upload to, so a fork's update list named parts that were not there)
 python3 scripts/linux/make_parts.py "$APPDIR" "$VERSION" "$B/parts" \
-    --base "https://git.notrexed.dev/${HOOKSHOT_REPOSITORY:-Hookshot/Hookshot}/releases/download/linux-parts"
+    --base "https://github.com/${HOOKSHOT_REPOSITORY:-eumarcodev/Hookshot}/releases/download/linux-parts"
 
 # The update information AppImageUpdate and Gear Lever read: the newest .zsync of this repository's latest release (or of
 # the release HOOKSHOT_UPDATE_RELEASE names). appimagetool writes it into the image and makes the .zsync beside it with
 # its bundled zsyncmake, which names the AppImage by its file name, next to the .zsync on the same release.
-UPDATE_REPO=${HOOKSHOT_REPOSITORY:-Hookshot/Hookshot}
+UPDATE_REPO=${HOOKSHOT_REPOSITORY:-eumarcodev/Hookshot}
 UPDATE_RELEASE=${HOOKSHOT_UPDATE_RELEASE:-latest}
-[ "$UPDATE_RELEASE" = latest ] && UPDATE_PATH=latest/download || UPDATE_PATH=download/$UPDATE_RELEASE
-UPDATE_INFO=${HOOKSHOT_UPDATE_INFO:-"zsync|https://git.notrexed.dev/$UPDATE_REPO/releases/$UPDATE_PATH/Hookshot-x86_64.AppImage.zsync"}
+# (GitHub's own format: gh-releases-zsync|<owner>|<repo>|<release: latest or a tag>|<.zsync name>, which AppImageUpdate resolves
+# through the API; HOOKSHOT_REPOSITORY is owner/repo)
+UPDATE_INFO=${HOOKSHOT_UPDATE_INFO:-"gh-releases-zsync|${UPDATE_REPO%%/*}|${UPDATE_REPO#*/}|$UPDATE_RELEASE|Hookshot-*-x86_64.AppImage.zsync"}
 OUT=$B/Hookshot-$VERSION-x86_64.AppImage
 rm -f "$OUT" "$OUT.zsync"
 # (from build-linux/: appimagetool writes the .zsync into the current folder)

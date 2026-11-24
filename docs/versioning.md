@@ -251,7 +251,7 @@ The release notes end with a short table of which file to download, and what the
 (`scripts/release_files.sh table`).
 
 The AppImage carries update information (`scripts/linux/appimage.sh`):
-`gh-releases-zsync|NotRexed|Hookshot|latest|Hookshot-*-x86_64.AppImage.zsync` for a release, `rc` in place of `latest`
+`gh-releases-zsync|eumarcodev|Hookshot|latest|Hookshot-*-x86_64.AppImage.zsync` for a release, `rc` in place of `latest`
 for a release candidate and `nightly` for the nightly, the repository being the one CI runs in. appimagetool writes it into the image and makes the `.zsync`, whose file URL is the AppImage's name beside it on the
 same release. `./Hookshot-v<version>-x86_64.AppImage --appimage-updateinformation` prints it.
 

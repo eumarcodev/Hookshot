@@ -957,7 +957,7 @@ class Builder(tk.Tk):
                              cursor="hand2")
         track.grid(row=1, column=0, sticky="we")
         track.bind("<<ComboboxSelected>>", self.on_track_changed)
-        # (the Version menu: Newest, the track's newest as before, or any release on git.notrexed.dev, older ones too)
+        # (the Version menu: Newest, the track's newest as before, or any release on GitHub, older ones too)
         self.section(tracks, "Version", 2, top=12)
         self.version_box = ttk.Combobox(tracks, textvariable=self.version, values=[NEWEST] + ([self.pinned] if self.pinned else []),
                                         state="readonly", font="HsNote", cursor="hand2", postcommand=self.load_versions)
@@ -1344,7 +1344,7 @@ class Builder(tk.Tk):
         if self.versions_asked:
             return
         self.versions_asked = True
-        self.version_box.configure(values=[NEWEST, "Reading the releases from git.notrexed.dev…"])
+        self.version_box.configure(values=[NEWEST, "Reading the releases from GitHub…"])
 
         def run():
             self.lines.put(("versions", linux_update.all_releases()))
@@ -1353,7 +1353,7 @@ class Builder(tk.Tk):
     def fill_versions(self, releases):
         if releases is None:
             self.versions_asked = False
-            values = [NEWEST, "git.notrexed.dev did not answer: open the menu again to retry"]
+            values = [NEWEST, "GitHub did not answer: open the menu again to retry"]
             self.version_tags = {}
         else:
             self.version_tags = {linux_update.release_label(r): r for r in releases}

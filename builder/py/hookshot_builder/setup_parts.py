@@ -73,7 +73,7 @@ class Http:
                 return None if sink else b"".join(out)
         except urllib.error.HTTPError as e:
             self.status = e.code
-            raise SetupError("git.notrexed.dev returned HTTP %d" % e.code) from None
+            raise SetupError("GitHub returned HTTP %d" % e.code) from None
         except (urllib.error.URLError, OSError, TimeoutError) as e:
             if not isinstance(e, SetupError):
                 self.status = self.status if self.status and self.status != 200 else 0
@@ -82,17 +82,17 @@ class Http:
 
 
 def api_link_for(http, url):
-    """https://git.notrexed.dev/<owner>/<repo>/releases/download/<tag>/<name> (or .../latest/download/<name>) -> the API's own link to
+    """https://github.com/<owner>/<repo>/releases/download/<tag>/<name> (or .../latest/download/<name>) -> the API's own link to
     that file, which redirects to a fresh download (the cached release links answered 504 for hours while the API answered)"""
     m = re.match(r"https://git\.notrexed\.dev/([^/]+/[^/]+)/releases/(?:download/([^/]+)|latest/download)/([^/?]+)$", url)
     if not m:
         return None
     repo, tag, name = m.groups()
-    api = "https://git.notrexed.dev/api/v1/repos/%s/releases/%s" % (repo, ("tags/" + tag) if tag else "latest")
+    api = "https://api.github.com/repos/%s/releases/%s" % (repo, ("tags/" + tag) if tag else "latest")
     try:
         doc = json.loads(http.get(api, accept="application/vnd.github+json"))
         for a in doc.get("assets", []):
-            if a.get("name") == name and str(a.get("browser_download_url", "")).startswith("https://git.notrexed.dev/"):
+            if a.get("name") == name and str(a.get("browser_download_url", "")).startswith("https://github.com/"):
                 return a["browser_download_url"]
     except (SetupError, ValueError):
         pass
@@ -124,8 +124,8 @@ def manifest_url(tag=None):
     if e:
         return e
     if tag:
-        return "https://git.notrexed.dev/%s/releases/download/%s/hookshot-setup.txt" % (REPO, tag)
-    return "https://git.notrexed.dev/%s/releases/latest/download/hookshot-setup.txt" % REPO
+        return "https://github.com/%s/releases/download/%s/hookshot-setup.txt" % (REPO, tag)
+    return "https://github.com/%s/releases/latest/download/hookshot-setup.txt" % REPO
 
 
 def read_manifest(status, tag=None, cancel=None):
@@ -156,7 +156,7 @@ def read_manifest(status, tag=None, cancel=None):
     if text is None:
         if http.status == 404:
             raise SetupError("The latest Hookshot release has no setup files yet. Download it from the releases page for now: "
-                             "https://git.notrexed.dev/%s/releases/latest" % REPO)
+                             "https://github.com/%s/releases/latest" % REPO)
         if http.status:
             raise SetupError("The download servers are failing right now (an error 500 or above, tried 8 times over 3 minutes). "
                              "This is on their side: try again in a few minutes, or later today.")

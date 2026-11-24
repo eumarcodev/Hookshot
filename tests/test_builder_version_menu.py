@@ -1,5 +1,5 @@
 """The Builders' Version menu (2026-11-15, the owner: "a version chooser that dynamically gets absolutely every release from the
-git"): every release on git.notrexed.dev, read page by page from Forgejo's API when the menu opens, newest first; a release chosen
+git"): every release on GitHub, read page by page from its API when the menu opens, newest first; a release chosen
 there is what the builder installs and builds the game with (as a switch of track installs that track's newest), saved, until
 Newest or another is chosen.
 

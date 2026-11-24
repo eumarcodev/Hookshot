@@ -105,14 +105,14 @@ jobs:
           echo "version: $tag"
 
       # (the list of the newest stable release other than this tag: its Python, emsdk, CPM, wgpu-native and third_party
-      # parts and its play profile. A fork with no release takes upstream's. A release must have one; any other run goes
+      # parts and its play profile. A repository with no release yet goes without. A release must have one; any other run goes
       # on without, and its package lacks those parts)
       - name: The latest release's setup list
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if python -I scripts/release_parts.py previous "$RUNNER_TEMP/previous-setup.txt" \
-              --repo "$GITHUB_REPOSITORY" --repo NotRexed/Hookshot --skip-tag "$TAG"; then
+              --repo "$GITHUB_REPOSITORY" --skip-tag "$TAG"; then
             echo "PREVIOUS=$RUNNER_TEMP/previous-setup.txt" >> "$GITHUB_ENV"
           elif [[ -n $RELEASE_TAG ]]; then
             exit 1
