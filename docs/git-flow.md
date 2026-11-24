@@ -67,3 +67,19 @@ git config core.hooksPath scripts/hooks
 
 It rejects a subject that is not `type(scope)!: description`, with the same types as the PR title check
 (`tests/test_commit_msg_hook.py` keeps the two lists equal).
+
+## Branch protection (GitHub)
+
+Set on `eumarcodev/Hookshot` for `main` and `develop`:
+
+| Rule | `main` | `develop` |
+|---|---|---|
+| Pull request required (0 approvals: one maintainer) | yes | yes |
+| Required check `Conventional Commit title` | yes | yes |
+| Conversations resolved before merge | yes | yes |
+| Linear history (no merge commits: fast-forward only) | yes | no (back-merges are merge commits) |
+| Force push and deletion | blocked | blocked |
+| Applies to administrators | no, so a release can be fast-forwarded from `develop` | no |
+
+The game-free checks are not required yet: `main` has known failures on Windows (see the triage note), and a required
+check that cannot pass would block every merge. Add them once `main` is green.
