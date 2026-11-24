@@ -63,7 +63,7 @@ def check_source():
           # the driver's limit, when it asks for more, clears both)
           "hold_to = evict_to;", "vram_compact::reserve_pct(pct), active_floor);", "if (reserve < budget) budget = evict_to = reserve;",
           "if (budget < evict_to) evict_to = hold_to = 0;",
-          "if (by_hold && !overwritten) hold_live += tex->bytes + tex->pad;",
+          "if (by_hold && !overwritten && !obsolete) hold_live += tex->bytes + tex->pad;",
           # (past the allowance no floor holds the textures: the 90% rule's and the hold's dynamic floor, the 97% rule's own)
           "const uint64_t active_floor = known ? vram_compact::floor_within(dynamic_floor, used, allowed) : 0;",
           "const uint64_t floor = vram_compact::count_line_floor(used, allowed);"])
