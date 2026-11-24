@@ -4,6 +4,7 @@
 #include "../gpu/vk/linux_pressure.h"
 #include "../gpu/vk/fallback_lanes.h"   // (program_cache_save and _read: a stage's free lanes)
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstddef>

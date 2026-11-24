@@ -158,6 +158,9 @@ jobs:
           HOOKSHOT_SPIRV_HEADERS: ${{ github.workspace }}/_deps/spirv-headers/include
           HOOKSHOT_VULKAN_HEADERS: ${{ github.workspace }}/_deps/vulkan-headers/include
           SHARD: ${{ matrix.shard }}
+          # (the runner's clang targets MSVC: <windows.h> defines min and max, and getenv/fopen are "deprecated" under -Werror.
+          # The renderer builds with llvm-mingw, where neither applies, so the checks compile with the same two defines)
+          CCC_OVERRIDE_OPTIONS: ${{ runner.os == 'Windows' && '^-D_CRT_SECURE_NO_WARNINGS ^-DNOMINMAX ^-DWIN32_LEAN_AND_MEAN' || '' }}
         run: python -I -B tests/run_all.py --strict --shard ${{ env.SHARD }}
       - name: Compiler cache statistics
         if: ${{ !cancelled() && runner.os == 'Linux' }}

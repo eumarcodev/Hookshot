@@ -49,6 +49,7 @@ def cut(text, marker, what):
 
 FIXTURE = r"""
 #include <array>
+#include <bit>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>

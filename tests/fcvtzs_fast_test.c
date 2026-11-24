@@ -112,10 +112,20 @@ static void all32(void) {
         }
 }
 
+#if defined(NEED_V3) && (defined(__x86_64__) || defined(_M_X64))
+#include <cpuid.h>
+/* (CPUID, not __builtin_cpu_supports: that one needs libgcc's or compiler-rt's __cpu_model, which clang for MSVC lacks) */
+static int cpu_is_v3(void) {
+    unsigned a, b, c, d;
+    if (!__get_cpuid(1, &a, &b, &c, &d) || !(c & (1u << 12))) return 0;      /* FMA */
+    if (!__get_cpuid_count(7, 0, &a, &b, &c, &d)) return 0;
+    return (b & (1u << 5)) && (b & (1u << 8));                                /* AVX2, BMI2 */
+}
+#endif
+
 int main(int argc, char **argv) {
 #if defined(NEED_V3) && (defined(__x86_64__) || defined(_M_X64))
-    __builtin_cpu_init();
-    if (!__builtin_cpu_supports("avx2") || !__builtin_cpu_supports("fma") || !__builtin_cpu_supports("bmi2")) {
+    if (!cpu_is_v3()) {
         printf("fcvtzs fast: not an x86-64-v3 CPU\n");
         return 3;
     }
