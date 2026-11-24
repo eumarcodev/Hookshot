@@ -28,6 +28,7 @@ What CONTRIBUTING.md does not spell out, and agents trip on:
 - **Builds and game runs go through the PC's job queue** (`scripts/job_queue.py`): `--mode timing` for numbers,
   `--mode shared` for every other game run. Never on a RAM file system
   (`/tmp` is often one): [Sharing a PC](docs/development.md#sharing-a-pc-the-job-queue).
+- **A change under `gpu/vk` is built whole before it is pushed:** the checks compile cuts of a file, so a missing header or an undeclared name only shows in the full compile. [Building the renderer alone, as CI does](docs/development.md#building-the-renderer-alone-as-ci-does-windows) takes about two minutes once set up.
 - **Test a change against a base, not in a new full build**: `scripts/dev_packs.py`, [Testing a change against a
   base](docs/development.md#testing-a-change-against-a-base). Agents sharing a PC share one base and agree before
   moving it; it is for development and A/B runs only. Bases, packs and runtimes are built from the game: never send them.

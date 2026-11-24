@@ -926,6 +926,41 @@ A build reads and writes tens of gigabytes. When the game folder or the build fi
 | `RX_VK_HANDLE_TABLES=0` | A texture handle a shader reads from a table at an index of its own (OoT's clustered lights: each light's shadow map, read per pixel from the light table) translated as before instead of as a descriptor array of the table's first 64 entries (`handle_tables_on` in `gpu/vk/vk_shader.cpp`, the texture pass's handle tables): those shadow tests then read no texture (the dark and green blocks of issue 52). Off, the texture pass's other changes that came with the tables are off too (its search skipping texture results and float math, words of 12- and 16-byte loads, the shared handle programs, the pointer words), so the translation is the one before them. On by default where the GPU indexes sampled image arrays per pixel (`shaderSampledImageArrayNonUniformIndexing`) and has at least 256 sampled images, samplers and resources a stage and 512 sampled images and samplers a set; the log says `vk: handle tables as descriptor arrays: on`, or which check turned them off. Part of the program cache's stamp when off; `nx2/bake_ds` bakes with them on unless `--feature no-handle-tables` |
 | `RX_VK_COMMIT_RESERVE_MB=<MB>` | Windows only: the commit the texture cache leaves free before Windows' commit limit (RAM plus the page file; default 2560, `0` turns the rule off). Every VRAM block counts against the process's commit, so below that much headroom (`GlobalMemoryStatusEx`'s `ullAvailPageFile`) the shortfall comes off the textures' budget and eviction and compaction give blocks back; the log says `vk: commit limit near:` at most every 600 frames while it is on. At the limit itself, `hos_commit` and the first-touch handler wait up to 5 s for commit (error 1455) before giving up |
 
+#### Building the renderer alone, as CI does (Windows)
+
+A change under `gpu/vk` can pass every game-free check and still not build: the checks compile cuts of a file, never the
+whole of it (a missing header or an undeclared name only the full compile finds). The Windows CI jobs ("Windows Vulkan
+back end", with and without NVIDIA DLSS and AMD FSR 4) build `hookshot_vk.dll` alone, with no game and no lift. Build it the
+same way before you push, in the clone's `_deps/` (git ignores it), about 1 GB:
+
+```
+python -I scripts/release_parts.py llvm-mingw _deps/llvm          # the pinned llvm-mingw, SHA-256 checked
+```
+
+The three header repositories, at the commits `.github/workflows/vulkan-dlss.yml` pins, each at the path CI gives it under
+`_deps/cpm/` (a shallow `git init`, `git fetch --depth 1 <repository> <commit>`, `git checkout FETCH_HEAD`):
+
+| Repository | Path under `_deps/cpm/` |
+|---|---|
+| KhronosGroup/Vulkan-Headers | `vulkanheaders/v1.4.345` |
+| KhronosGroup/SPIRV-Headers | `spirv-headers/vulkan-sdk-1.4.341.0` |
+| GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator | `vulkanmemoryallocator/v3.3.0` |
+
+When the workflow's pins change, take the new ones from it. Then, through the job queue, from the clone's folder (Git Bash
+syntax; the same variables with `$env:` in PowerShell):
+
+```
+export HOOKSHOT_MINGW="$PWD/_deps/llvm/<the folder release_parts.py printed>"
+RX_VK_ONLY=1 RX_RELEASE=1 HOOKSHOT_FSR=1 OOT_WORK="$PWD/_deps/vk-work" RX_CPM="$PWD/_deps/cpm"   python -I scripts/job_queue.py run vkbuild --mode build -- python -I nx2/build.py --standalone --jobs 4
+```
+
+It writes `_deps/vk-work/sa/build/hookshot_vk.dll` and says `with AMD FSR 4` in its log. The first build compiled the
+renderer in about 100 s (4 jobs); the next ones only what changed. `HOOKSHOT_FSR=1` builds AMD FSR 4 (AMD's MIT headers,
+in `third_party/fidelityfx`, nothing downloaded). For NVIDIA DLSS too, fetch NVIDIA's SDK yourself, which asks you to accept
+NVIDIA's license (`python -I scripts/ngx_sdk.py --platform windows --build-only _deps/ngx-sdk`), and add
+`HOOKSHOT_NGX_SDK="$PWD/_deps/ngx-sdk"`; CI's job does both. Linux builds the same renderer with clang and the distro's
+headers ([Use](#use)).
+
 **What a build compiles again.** Each object is named by its source, its flags and the headers it depends on
 (`nx2/build.py` `object_key`), and kept in the object cache under that name. The Vulkan back end's own files (`gpu/vk`,
 not eden or sirit) and the host's (`host/`) are compiled with `-MD`, and the next build names each by the headers its
