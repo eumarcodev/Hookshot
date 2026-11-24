@@ -28,6 +28,14 @@ Changes made here after the copy (against Hookshot's first import of it, commit 
 - Hookshot: `lift/a64_lift.py`'s fast float checks are kept by the instruction's text (`ff_joins`, `ff_convs`,
   `fp_is_frame_kept`, marked `(hookshot)`): the same C, the lift a third quicker on Windows.
 - Hookshot: `ff_region` takes `ff_min()` from its caller, read once a function (`least`, marked `(hookshot)`).
+- Hookshot, 2026-11-17 to 2026-11-19: `lift/a64_lift.py` again, only there. `e22f874e`: the emit's and
+  the page-mark grouping's work runs in worker processes started anew on Windows too (the lift on every core), the
+  instruction texts made once per distinct instruction. `4e473205`: the page-mark workers (`A64_MARK_JOBS`, bounded by
+  the memory available) may die without ending the lift, the files whose result did not come back are grouped by the
+  lift's own process. `77e00e10` (the other port's, brought in by the merge `0884419c`, kept with Hookshot's names): the hot functions' floating point runs on the
+  host's own instructions (`A64_NATIVE_FP`, default on) and their vector registers can be locals too
+  (`A64_LOCAL_VREGS`, `A64_LOCAL_REGS_HOT`). All marked `(hookshot)`. The tree-sha256 below was refreshed with
+  `python -I scripts/check_third_party.py --update a64-kit`.
 
 So the copy can no longer be refreshed by copying the files again: a refresh keeps these changes, and the tree-sha256
 below is this folder's, not upstream's (python -I scripts/check_third_party.py).
@@ -35,4 +43,4 @@ below is this folder's, not upstream's (python -I scripts/check_third_party.py).
 Licensing: `lift/suyu/arm64_to_c.h` is suyu's (GPL-2.0-or-later, texts in `lift/suyu/`), so `a64emit.dll`, the
 generated runtime and all lifted C are GPL. See `NOTICE.TOTKPort.md`.
 
-tree-sha256: 62e2b3b6441109ccfce200785d57c114292887e5184c12f8c604893cf4dbd0a4
+tree-sha256: a9f65e695d570892e9f58ec8b98a270a9e0639c5e5f9b808b9e75732facb37c6
