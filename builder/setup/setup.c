@@ -136,7 +136,7 @@ static int home_path(wchar_t *out, const wchar_t *format, ...) {
 /* ---- HTTPS GET into a sink, following redirects (GitHub's release links go to its download host) ---- */
 typedef int (*Sink)(void *user, const void *data, DWORD n);
 
-static int http_get_once(const char *url8, Sink sink, void *user, unsigned long long expect, const wchar_t *accept) {
+static int http_get(const char *url8, Sink sink, void *user, unsigned long long expect, const wchar_t *accept) {
     wchar_t url[1024];
     MultiByteToWideChar(CP_UTF8, 0, url8, -1, url, 1024);
     URL_COMPONENTS uc = {sizeof uc};
@@ -190,31 +190,11 @@ static int http_get_once(const char *url8, Sink sink, void *user, unsigned long 
     return ok;
 }
 
-/* (2026-11-15) The server's own address, not through Cloudflare and not under notrexed.dev: what the setup downloads from when
-   git.notrexed.dev gives no answer at all. Players saw "The download server didn't answer (0)" through WARP and VPNs too: an
-   antivirus's web filter (BitDefender flags the domain) or a provider blocking notrexed.dev, which a VPN does not get round
-   from inside the PC. The VPS serves the release files, the latest links and the API's latest release there itself (its
-   Caddyfile), and the setup list's part links are git.notrexed.dev's, so each request is the same path on the other host.
-   Once git.notrexed.dev gave no answer, the rest of this run asks the other host first; if that gives none either, the next
-   try goes back to git.notrexed.dev. An answer with an error status (a 404, a 5xx) is git.notrexed.dev's own: not switched */
-static const char kMainHost[] = "https://git.notrexed.dev/";
-static const char kFallbackHost[] = "https://git.13.140.227.35.sslip.io/";
-static int g_fallback;   /* (git.notrexed.dev gave no answer: its requests go to kFallbackHost first) */
-
-static int http_get(const char *url8, Sink sink, void *user, unsigned long long expect, const wchar_t *accept) {
-    const size_t main_n = sizeof kMainHost - 1;
-    if (strncmp(url8, kMainHost, main_n)) return http_get_once(url8, sink, user, expect, accept);
-    char other[2048];
-    snprintf(other, sizeof other, "%s%s", kFallbackHost, url8 + main_n);
-    for (int k = 0; k < 2; k++) {
-        const int fallback = g_fallback;
-        const int ok = http_get_once(fallback ? other : url8, sink, user, expect, accept);
-        if (ok || g_http_status) return ok;   /* (an answer, even an error: not a block) */
-        g_fallback = !fallback;   /* (no answer at all: the other host, now and for the rest of this run) */
-        if (!fallback) status(L"git.notrexed.dev did not answer: trying the server's own address");
-    }
-    return 0;
-}
+/* Where the Hookshot Builder comes from: the GitHub releases of this repository. Its downloads (github.com/<repo>/releases/...)
+   redirect to GitHub's CDN, which WinHTTP follows itself; the API (api.github.com) names the same files. */
+#define HOOKSHOT_REPO "eumarcodev/Hookshot"
+#define DOWNLOAD_HOST "https://github.com/"
+#define API_RELEASES "https://api.github.com/repos/%s/releases/"
 
 typedef struct { char *p; size_t n, cap; } Mem;
 static int mem_sink(void *u, const void *d, DWORD n) {
@@ -238,13 +218,12 @@ static int file_sink(void *u, const void *d, DWORD n) {
     return BCryptHashData(s->h, (PUCHAR)d, n, 0) == 0;
 }
 
-/* ---- (2026-11-15) Files the player downloaded with a browser. Players whose setup could not reach git.notrexed.dev (their
+/* ---- (2026-11-15) Files the player downloaded with a browser. Players whose setup could not reach GitHub (their
    network, a VPN, an antivirus or proxy in the way) could still open its links in a browser, which has their proxy and VPN
-   settings, resumes a dropped download and answers Cloudflare's checks. hookshot.notrexed.dev/manual lists the latest
-   release's links: hookshot-setup.txt and each part. A file of that name in the player's Downloads folder, or beside this
+   settings and resumes a dropped download. The latest release's page on GitHub lists the files: hookshot-setup.txt and each part. A file of that name in the player's Downloads folder, or beside this
    setup, is taken in place of the download: the list only when the server did not answer, a part only when its SHA-256 is
    the list's ---- */
-#define MANUAL_PAGE L"https://hookshot.notrexed.dev/manual"
+#define MANUAL_PAGE L"https://github.com/eumarcodev/Hookshot/releases/latest"
 static int browser_file(const char *name, wchar_t *out) {
     static const GUID downloads_id = {0x374DE290, 0x123F, 0x4565, {0x91, 0x64, 0x39, 0xC4, 0x92, 0x5E, 0x46, 0x7B}};
     wchar_t wname[260], dirs[2][MAX_PATH];
@@ -657,23 +636,23 @@ static int asset_from_json(const char *json, size_t len, const char *name, char 
     if (!at) return 0;
     const char *close = strchr(at, '}'), *url = strstr(at, "\"browser_download_url\"");
     return url && close && url < close && json_string_after(url + 22, end, out, n) &&
-           !strncmp(out, "https://git.notrexed.dev/", 25);
+           !strncmp(out, DOWNLOAD_HOST, sizeof DOWNLOAD_HOST - 1);
 }
 
 /* repo "owner/name", tag NULL for the latest release */
 static int api_asset_url(const char *repo, const char *tag, const char *name, char *out, int n) {
     char api[1024];
-    if (tag) snprintf(api, sizeof api, "https://git.notrexed.dev/api/v1/repos/%s/releases/tags/%s", repo, tag);
-    else snprintf(api, sizeof api, "https://git.notrexed.dev/api/v1/repos/%s/releases/latest", repo);
+    if (tag) snprintf(api, sizeof api, API_RELEASES "tags/%s", repo, tag);
+    else snprintf(api, sizeof api, API_RELEASES "latest", repo);
     Mem m = {0};
     const int found = http_get(api, mem_sink, &m, 0, L"application/vnd.github+json") && m.p && asset_from_json(m.p, m.n, name, out, n);
     free(m.p);
     return found;
 }
 
-/* https://git.notrexed.dev/<owner>/<repo>/releases/download/<tag>/<name> or .../releases/latest/download/<name> -> the link the API gives */
+/* https://github.com/<owner>/<repo>/releases/download/<tag>/<name> or .../releases/latest/download/<name> -> the link the API gives */
 static int api_link_for(const char *url, char *out, int n) {
-    static const char pre[] = "https://git.notrexed.dev/";
+    static const char pre[] = DOWNLOAD_HOST;
     char repo[256], tag[256], name[260];
     if (strncmp(url, pre, sizeof pre - 1)) return 0;
     const char *p = url + sizeof pre - 1, *slash = strchr(p, '/');
@@ -774,8 +753,8 @@ static const char *manifest_url(void) {
     if (!tag[0] && HOOKSHOT_SETUP_RELEASE[0] && strlen(HOOKSHOT_SETUP_RELEASE) < sizeof tag) strcpy(tag, HOOKSHOT_SETUP_RELEASE);
     if (e && *e) snprintf(u, sizeof u, "%s", e);
     else if (tag[0])
-        snprintf(u, sizeof u, "https://git.notrexed.dev/Hookshot/Hookshot/releases/download/%s/hookshot-setup.txt", nightly_tag(tag) ? "nightly" : tag);
-    else snprintf(u, sizeof u, "%s", "https://git.notrexed.dev/Hookshot/Hookshot/releases/latest/download/hookshot-setup.txt");
+        snprintf(u, sizeof u, DOWNLOAD_HOST HOOKSHOT_REPO "/releases/download/%s/hookshot-setup.txt", nightly_tag(tag) ? "nightly" : tag);
+    else snprintf(u, sizeof u, "%s", DOWNLOAD_HOST HOOKSHOT_REPO "/releases/latest/download/hookshot-setup.txt");
     return u;
 }
 
@@ -844,16 +823,16 @@ static DWORD WINAPI work(LPVOID unused) {
         free(man.p);
         man = (Mem){0};
         ok = read_whole(saved_list, &man);
-        if (ok) status(L"git.notrexed.dev did not answer: using %ls", saved_list);
+        if (ok) status(L"GitHub did not answer: using %ls", saved_list);
     }
     if (!ok && !g_http_status)
-        fail(L"Could not reach git.notrexed.dev to get the Hookshot Builder: %ls (Windows error %lu).\n\nIf it keeps failing, "
+        fail(L"Could not reach GitHub to get the Hookshot Builder: %ls (Windows error %lu).\n\nIf it keeps failing, "
              L"download the files listed at " MANUAL_PAGE L" with your browser into your Downloads folder (or beside "
              L"HookshotBuilder.exe), then start HookshotBuilder.exe again: it uses them.", net_why(g_http_error), g_http_error);
     if (!ok)
         fail(g_http_status == 404
                  ? L"The latest Hookshot release has no setup files yet. Download HookshotBuilder.zip from the releases page for now: "
-                   L"https://git.notrexed.dev/Hookshot/Hookshot/releases/latest"
+                   L"https://github.com/eumarcodev/Hookshot/releases/latest"
                  : L"The download server is failing right now (an error 500 or above, tried 8 times over 3 minutes). "
                    L"This is on the server's side: try again in a few minutes, or later today.");
 
