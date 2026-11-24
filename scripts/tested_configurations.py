@@ -106,14 +106,15 @@ def render(root=ROOT):
 
 
 def unicode_output():
-    """Pipes get UTF-8; consoles keep their encoding, as in tests/run_all.py."""
+    """Pipes get UTF-8 and LF line ends, as --output writes (a Windows pipe would write CRLF); consoles keep their
+    encoding, as in tests/run_all.py."""
     for stream in (sys.stdout, sys.stderr):
         if not hasattr(stream, "reconfigure"):   # A StringIO, as in the tests.
             continue
         if stream.isatty():
             stream.reconfigure(errors="replace")
         else:
-            stream.reconfigure(encoding="utf-8", errors="replace")
+            stream.reconfigure(encoding="utf-8", errors="replace", newline="\n")
 
 
 def main(argv=None):
