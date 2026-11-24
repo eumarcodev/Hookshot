@@ -7014,7 +7014,7 @@ void release_uncovered(uint64_t lo, uint64_t hi) {   // (pools_mu held)
     };
     for (auto it = imported.lower_bound(hi); it != imported.begin();) {   // (the pools starting below hi, the last ones first)
         --it;
-        if (it->second.hi + (1ull << 30) < lo) break;   // (imports are at most 1 GB: none further down reaches lo)
+        if (import_reach::beyond(live_reach, it->second.lo, lo)) break;   // (none further down reaches lo: imports can be larger than 1 GB)
         note(it->second.lo, it->second.hi);
     }
     {
