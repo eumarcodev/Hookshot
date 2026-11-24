@@ -36,7 +36,6 @@ using VkBool32 = uint32_t;
 constexpr VkBool32 VK_FALSE = 0;
 enum VkShaderFloatControlsIndependence { VK_SHADER_FLOAT_CONTROLS_INDEPENDENCE_ALL = 1, VK_SHADER_FLOAT_CONTROLS_INDEPENDENCE_NONE = 2 };
 constexpr uint32_t VK_DRIVER_ID_AMD_PROPRIETARY = 1;
-constexpr bool VK_FALSE = false;
 constexpr uint32_t VK_DRIVER_ID_MESA_RADV = 3;   // (the RADV branch of the fragment shuffle fallback)
 struct {
     uint32_t sg32_stages = 0, subgroup_size = 32, subgroup_max = 32, driver_id = 0;
@@ -64,6 +63,7 @@ struct {
     // which tests/test_device_policy.py holds device_policy() to)
     struct { bool warp64 = false, frag_shuffle_fallback = false, gather_offset = false; } policy;
 } dev;
+bool float16_shaders() { return dev.vk12.shaderFloat16; }   // (vk_shader.cpp: the device's shaderFloat16, no switch here)
 
 using Shader::Stage;
 using Id = uint32_t;

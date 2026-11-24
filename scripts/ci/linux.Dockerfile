@@ -5,7 +5,7 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates curl git g++ clang ccache cmake make ninja-build pkg-config spirv-tools libdav1d-dev \
-      python3 python3-venv python3-pip \
+      python3 python3-venv python3-pip python3-tk lld dotnet-sdk-8.0 \
       mesa-vulkan-drivers vulkan-validationlayers libvulkan-dev vulkan-tools \
     && rm -rf /var/lib/apt/lists/*
 ARG GLSLANG_VERSION=16.6.0
@@ -20,6 +20,6 @@ RUN curl -fsSL --retry 5 -o /tmp/al.tar.gz https://github.com/rhysd/actionlint/r
     && echo "${ACTIONLINT_SHA256}  /tmp/al.tar.gz" | sha256sum -c - && tar -xzf /tmp/al.tar.gz -C /usr/local/bin actionlint && rm /tmp/al.tar.gz
 # (the packages tests import, as the workflow's "Python packages for the tests" step pins them)
 RUN python3 -m venv /opt/venv && /opt/venv/bin/pip install --no-cache-dir --disable-pip-version-check --no-deps \
-      zstandard==0.25.0 pillow==13.0.0 numpy==2.5.4 lz4==4.4.5
+      zstandard==0.25.0 pillow==13.0.0 numpy==2.5.4 lz4==4.4.5 unicorn==2.1.4
 ENV PATH=/opt/venv/bin:/opt/glslang/bin:$PATH CCACHE_DIR=/ccache CCACHE_MAXSIZE=400M
 WORKDIR /work

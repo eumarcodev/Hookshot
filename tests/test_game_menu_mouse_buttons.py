@@ -80,7 +80,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="hookshot-game-menu-mouse-") as tmp:
         c, exe = Path(tmp) / "fixture.c", Path(tmp) / "fixture.exe"
         c.write_text(source, encoding="utf-8")
-        subprocess.run([a.cc, "-std=c11", "-O0", "-Wall", "-Wextra", "-Werror", str(c), "-o", str(exe)], check=True)
+        subprocess.run([a.cc, "-std=c11", "-O0", "-Wall", "-Wextra", "-Werror", "-Wno-unused-but-set-global", str(c), "-o", str(exe)], check=True)
         run = subprocess.run([str(exe)], capture_output=True, text=True)
         print(run.stdout, end="")
         if run.returncode:

@@ -41,10 +41,11 @@ class FormScrollTests(unittest.TestCase):
         win.scale = 1.0
         win.apply_theme()
         win.cfg = {"out": out.name}
-        for name in ("kind", "nup", "romfs", "exefs", "out", "language", "track", "status", "check_text", "space_text"):
+        for name in ("kind", "nup", "romfs", "exefs", "out", "language", "track", "version", "status", "check_text", "space_text"):
             setattr(win, name, tk.StringVar(win, value="nup" if name == "kind" else out.name if name == "out" else ""))
-        win.prepare, win.dlss = tk.BooleanVar(win), tk.BooleanVar(win)
-        win.page = win.build_button = win.launch_folder = None
+        win.prepare, win.dlss, win.fsr = tk.BooleanVar(win), tk.BooleanVar(win), tk.BooleanVar(win)
+        win.page = win.build_button = win.launch_folder = win.pinned = None
+        win.save_choice, win.found_saves = tk.StringVar(win, value=""), []   # (Bring in a save: none found)
         win.apply_mode = lambda: None
         win.show_form()
         win.update()

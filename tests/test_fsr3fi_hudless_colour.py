@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))   # (tests/srccut.py: p
 from srccut import block   # noqa: E402
 
 RUN_ALL_ARGS = ["--cxx", "{cxx}", "--glslang", "{glslang}"]
+RUN_ALL_SKIP = {"windows": "needs glslang: checked on Linux"}
 
 ROOT = Path(__file__).resolve().parents[1]
 SHADERS = ROOT / "gpu" / "vk" / "shaders"

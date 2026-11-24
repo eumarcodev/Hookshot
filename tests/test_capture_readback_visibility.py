@@ -39,7 +39,8 @@ def main():
     end = source.index("            // (RX_VK_DUMP_BLACK", start)
     take = source[start:end] + "\n(void)at_present; return px; };\n"
     helper_start = source.index("std::shared_ptr<std::vector<uint8_t>> shot_pixels(")
-    helper_end = source.index("void do_present(", helper_start)
+    # (shot_pixels alone: the Travel page's and the screenshot's own pictures, which follow it, are not under test here)
+    helper_end = source.index("// (hookshot) the Travel page's own pictures", helper_start)
     helper = source[helper_start:helper_end]
     start = source.index("        if (shot && made_src && made_map) {")
     end = source.index("        } else if (shot)", start)

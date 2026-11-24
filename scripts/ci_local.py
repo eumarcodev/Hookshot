@@ -138,10 +138,17 @@ def source_tar(job_script, ref=None):
     else:
         names = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "-z"], cwd=ROOT, stdout=subprocess.PIPE, check=True)
         t = tarfile.open(fileobj=buf, mode="w")
+        # (Windows files have no execute bit: a script git tracks as executable stays so, as a Linux checkout has it)
+        staged = subprocess.run(["git", "ls-files", "-s", "-z"], cwd=ROOT, stdout=subprocess.PIPE, check=True).stdout.decode("utf-8")
+        executable = {rec.split("\t", 1)[1] for rec in staged.split("\0") if rec.startswith("100755 ")}
         for n in names.stdout.decode("utf-8").split("\0"):
             p = os.path.join(ROOT, n)
             if n and os.path.isfile(p) and not os.path.islink(p):
-                t.add(p, arcname=n)
+                info = t.gettarinfo(p, arcname=n)
+                if n in executable:
+                    info.mode = 0o755
+                with open(p, "rb") as f:
+                    t.addfile(info, f)
     with t:
         info = tarfile.TarInfo(".ci_job.sh")
         info.size = len(job_script)

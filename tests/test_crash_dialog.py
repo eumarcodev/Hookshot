@@ -428,7 +428,7 @@ def source_checks():
 
 
 def run(exe, *args):
-    r = subprocess.run([str(exe), *map(str, args)], capture_output=True, text=True, timeout=30, encoding="utf-8")
+    r = subprocess.run([str(exe), *map(str, args)], capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
     assert r.returncode == 0, (args, r.returncode, r.stderr)
     return r.stdout
 
@@ -489,7 +489,7 @@ def logic_checks(exe, menu, tmp, form):
     assert "https://example.invalid/issues/new/choose" in text, "no browser: the form's address said"
     print("PASS: the clipboard tools in turn; the box after Report never says copied when nothing took it")
     # Windows' quoting, read back by CommandLineToArgvW's rules
-    for arg in ("C:\\Games\\Hookshot", "C:\\Games\\Long shot\\", 'a"b', "x\\\\", "x\\\"y", "", "ゲーム Zélda 🎮", "--crash-watch"):
+    for arg in ("C:\\Games\\Hookshot", "C:\\Games\\Long shot\\", 'a"b', "x\\\\", "x\\\"y", "", "--crash-watch") + (() if os.name == "nt" else ("ゲーム Zélda 🎮",)):   # (the driver's narrow main gets its arguments in the ANSI code page on Windows: not UTF-8 text)
         quoted = run(exe, "quote", 500, arg)[:-1]
         assert argv_of("prog " + quoted)[1:] == [arg], (arg, quoted)
     assert run(exe, "quote", 4, "long").strip() == "<none>", "a quoted argument that does not fit is refused, not cut"
@@ -512,7 +512,7 @@ def logic_checks(exe, menu, tmp, form):
     # the log: what it says, the stage
     def facts(*lines):
         path = tmp / "facts.txt"
-        path.write_text("".join(l + "\n" for l in lines), encoding="utf-8")
+        path.write_text("".join(l + "\n" for l in lines), encoding="utf-8", newline="\n")
         out = run(exe, "log", path).splitlines()
         values = dict(kv.split("=") for kv in out[0].split())
         values.update(line.split("=", 1) for line in out[1:])
@@ -567,12 +567,12 @@ def logic_checks(exe, menu, tmp, form):
         lines = ["Hookshot %s record 1" % kind, "version: v3.1.0", "run_id: " + RUN, "when: 20261114T101112Z"]
         lines += ["%s: %s" % kv for kv in values.items()] + ["record_complete: yes"]
         path = tmp / ("record-%d.txt" % len(list(tmp.glob("record-*.txt"))))
-        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
         return path
 
     def log(*lines):
         path = tmp / ("log-%d.txt" % len(list(tmp.glob("log-*.txt"))))
-        path.write_text("".join(l + "\n" for l in head + list(lines)), encoding="utf-8")
+        path.write_text("".join(l + "\n" for l in head + list(lines)), encoding="utf-8", newline="\n")
         return path
 
     def verdict(rec, lg, have=0, code=0, replaced=0):
@@ -638,7 +638,7 @@ def logic_checks(exe, menu, tmp, form):
               "C:\\Users\\Private Users\\x", "[hos host] vk: pipeline cache C:\\USERS\\PRIVATE USER\\AppData\\x.bin"]
     for home, user, windows, sample in ((home_l, user_l, 0, lines), (win_home, win_user, 1, wlines), (home_l + "/", user_l, 0, lines)):
         path = tmp / "redact.txt"
-        path.write_text("".join(l + "\n" for l in sample), encoding="utf-8")
+        path.write_text("".join(l + "\n" for l in sample), encoding="utf-8", newline="\n")
         ours = run(exe, "redact", home, user, windows, path)
         theirs = run(menu, home, user, windows, path)
         assert ours == theirs, (ours, theirs)

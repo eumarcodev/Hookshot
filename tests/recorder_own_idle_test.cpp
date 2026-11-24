@@ -28,6 +28,7 @@
 
 namespace mkwvk {
 std::atomic<uint64_t> work_epoch{0};
+std::atomic<uint64_t> foreign_work{0};   // (vk_texture.cpp: note_work's calls with no command buffer, vk_work.h)
 std::atomic<bool> par_active{false};
 std::atomic<int> logs_own{0}, logs_idle{0};
 void logf(const char* fmt, ...) {   // (the renderer's log: printed, and the lines this test looks for counted)

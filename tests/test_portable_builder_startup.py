@@ -43,7 +43,7 @@ def main():
         env.update(DOTNET_ROOT=str(runtime_root), DOTNET_ROOT_X64=str(runtime_root), DOTNET_MULTILEVEL_LOOKUP="0")
         runtime = json.loads((app / "HookshotBuilder.runtimeconfig.json").read_text(encoding="utf-8"))["runtimeOptions"]
         assert "includedFrameworks" in runtime and "framework" not in runtime and "frameworks" not in runtime
-        assert (app / "coreclr.dll").is_file() and not (app / "PresentationFramework.dll").exists()   # (no WPF: no window)
+        assert (app / "coreclr.dll").is_file() and (app / "PresentationFramework.dll").is_file()   # (the Builder has its window: WPF, in the self-contained folder)
         # The authored tools fixture uses the trusted interpreter running this check, not another PATH entry.
         env["PATH"] = str(Path(os.sys.executable).parent) + os.pathsep + env.get("PATH", "")
         scenarios = 0

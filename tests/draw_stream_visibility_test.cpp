@@ -61,7 +61,15 @@ void draw_flush_recording(int slot);
 VkCommandBuffer rec_cmd{};
 uint64_t rec_value=0,targets_serial=0;
 VkBuffer zero_buffer{}; VmaAllocation zero_alloc{};
-VkDescriptorPool make_pool() { return handle<VkDescriptorPool>(); }
+VkDescriptorPool make_pool(uint32_t=0) { return handle<VkDescriptorPool>(); }
+uint32_t pool_shift_first() { return 0; }   // (vk_draw.cpp: a slot's pool starts whole here)
+std::atomic<uint64_t> pools_grown{0};
+struct ProgSlots {}; std::unordered_map<const void*, ProgSlots>& prog_slots() { static std::unordered_map<const void*, ProgSlots> m; return m; }   // (vk_draw.cpp: emptied with handle_hits)
+namespace fps_stats { [[maybe_unused]] constexpr int kRtGpu = 2; }
+struct FpsRtWait { explicit FpsRtWait(int) {} };   // (vk_fps.h: the FPS counter's render lane)
+VKAPI_ATTR VkResult VKAPI_CALL vkGetSemaphoreCounterValue(VkDevice,VkSemaphore,uint64_t* value) { *value=0; return VK_SUCCESS; }   // (the batch's timeline: the GPU is busy with what was sent, so a held submit is not sent for idleness)
+VkSemaphore batch_tl{};uint64_t batch_flushed=1;   // (vk_replay.cpp: the batch's timeline and what was sent on it)
+void host_read_barrier(VkCommandBuffer) {}   // (vk_replay.cpp: a memory barrier only)
 VKAPI_ATTR VkResult VKAPI_CALL vkResetDescriptorPool(VkDevice,VkDescriptorPool,VkDescriptorPoolResetFlags) { return VK_SUCCESS; }
 VKAPI_ATTR void VKAPI_CALL vkDestroyDescriptorPool(VkDevice,VkDescriptorPool,const VkAllocationCallbacks*) {}
 struct Pass {}; Pass& pass() { static Pass p;return p; }
@@ -120,6 +128,8 @@ VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit2(VkQueue,uint32_t count,const VkSub
     }
     queued++;return VK_SUCCESS;
 }
+// (vk_replay.cpp: the submit made again while the driver refuses it for want of memory; the spy never refuses)
+VkResult submit_or_retry(const VkSubmitInfo2& si, VkFence fence) { return vkQueueSubmit2(VK_NULL_HANDLE, 1, &si, fence); }
 void queue_flush_locked() {
     if(pend.cbs.empty())return;
     VkSubmitInfo2 si{VK_STRUCTURE_TYPE_SUBMIT_INFO_2};si.commandBufferInfoCount=(uint32_t)pend.cbs.size();si.pCommandBufferInfos=pend.cbs.data();

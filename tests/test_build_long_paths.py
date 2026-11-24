@@ -218,7 +218,13 @@ class EntryScripts(unittest.TestCase):
         for name in ENTRY_SCRIPTS:
             with self.subTest(name):
                 script = str(ROOT / "nx2" / (name + ".py"))
-                code = ("import importlib.util, os, sys\n"
+                # (the build's packages the scripts import, stood in where this PC has not installed them: only the loading is checked)
+                code = ("import importlib, importlib.util, os, sys, types\n"
+                        "class Stub(types.ModuleType):\n    def __getattr__(self, n):\n"
+                        "        if n.startswith('__'):\n            raise AttributeError(n)\n        return 0\n"
+                        "for name in ('capstone', 'lz4', 'lz4.block', 'numpy', 'unicorn', 'zstandard'):\n"
+                        "    try:\n        importlib.import_module(name)\n    except ImportError:\n"
+                        "        sys.modules[name] = Stub(name)\n"
                         "s = importlib.util.spec_from_file_location('entry', %r)\n"
                         "m = importlib.util.module_from_spec(s)\n"
                         "s.loader.exec_module(m)\n"

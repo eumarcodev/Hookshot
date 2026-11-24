@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "nx2"))
@@ -37,7 +38,15 @@ with tempfile.TemporaryDirectory() as top:
     assert killed.stdout.readline().strip() == "held"
     killed.kill()
     killed.wait(timeout=30)
-    make_game.lock_work(work)   # (the build before ended, or was killed: its lock went with it)
+    # (Windows closes a killed process's handles, and so releases its lock, a moment after kill() returns: asked again for a few seconds)
+    for attempt in range(50):
+        try:
+            make_game.lock_work(work)   # (the build before ended, or was killed: its lock went with it)
+            break
+        except SystemExit:
+            if attempt == 49:
+                raise
+            time.sleep(0.1)
     held = make_game._WORK_LOCK[1]
     make_game.lock_work(work)   # (a second main() in the same process: the lock it holds, kept)
     assert make_game._WORK_LOCK[1] is held and not held.closed

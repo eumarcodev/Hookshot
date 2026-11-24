@@ -126,6 +126,14 @@ class MissingNupTests(unittest.TestCase):
         self.package.write_bytes(b"authored package sentinel")
         stamp = "unpacked by this builder: %s %d\n" % (self.package.name, self.package.stat().st_size)
         (self.out / ".hookshot_romfs").write_text(stamp, encoding="utf-8")
+        # (the unpacked copy is checked for what the game's start needs before it is reused: make_game.ROMFS_NEEDED)
+        for names, there in make_game.ROMFS_NEEDED:
+            path = self.out / "romfs" / names[0]
+            if there is os.path.isdir:
+                path.mkdir(parents=True, exist_ok=True)
+            else:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"authored needed file")
         self.before = self.files()
         code, text = self.invoke()
         self.assertEqual(code, 0, text)

@@ -46,12 +46,15 @@ static FILE *limit_file(const char *path, const char *mode) {
     FILE *f=tmpfile(); assert(f); fputs(authored_limit,f); rewind(f); return f;
 }
 static int close_device(int fd) { assert(fd==42); ++closes; return 0; }
+// (host/hos_main.c: the switches' rule for a value that is off, and RX_VK_NO_DMABUF, not set here)
+static int env_value_off(const char *v) { return v[0]=='0' && !v[1]; }
 #define fopen limit_file
 #define close close_device
 #define hos_log(...) (++notices)
 static void probe(int u, const char *e) {
     int usable=0;
     unsigned long long limit_mb=0;
+    const int no_dmabuf=0;
 @@BLOCK@@
     printf("%d,%llu,%d,%d,%d,%d\n",usable,limit_mb,@@SELECTION@@,reads,closes,notices);
 }
@@ -71,7 +74,7 @@ def main():
     source = args.source.read_text(encoding="utf-8")
     start = source.index('            if (u >= 0) {', source.index('getenv("HOS_GUEST_MEMFD")'))
     block = source[start:source.index('            if (!usable && !e)', start)]
-    selection = re.search(r'if \((e \? atoi\(e\) != 0 : usable)\)', source).group(1)
+    selection = re.search(r'if \((e \? !env_value_off\(e\) : usable && !no_dmabuf)\)', source).group(1)
     code = FIXTURE.replace("@@BLOCK@@", block).replace("@@SELECTION@@", selection)
     with tempfile.TemporaryDirectory(prefix="udmabuf-selection-") as folder:
         root = Path(folder)

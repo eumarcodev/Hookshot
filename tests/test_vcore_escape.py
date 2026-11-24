@@ -258,9 +258,14 @@ def main():
     src = args.source.read_text(encoding="utf-8")
     start = src.index("static SRWLOCK vc_lock = SRWLOCK_INIT;")
     end = src.index("\n#else", src.index("int hos_cv_sleep(void *cv, void *lk, unsigned ms) {", start))
+    vcores = src[start:end]
+    # (vc_where samples the holder's instruction pointer through Win32's thread context: the fixture has none of that API, and the
+    # escape's line only gains " at <module>+<offset>" from it)
+    where = block(vcores, "static void vc_where(")
+    vcores = vcores.replace(where, "static void vc_where(HosThread *h, char *out, size_t cap) { (void)h; (void)cap; out[0] = 0; }")
     fixture = (HARNESS.replace("@STRUCT@", block(src, "struct HosThread {") + "\ntypedef struct HosThread HosThread;")
                .replace("@CORE@", block(src, "int hos_thread_core(HosThread *t) {"))
-               .replace("@VCORES@", src[start:end]))
+               .replace("@VCORES@", vcores))
     compiler = shutil.which(args.cxx)
     if not compiler:
         raise SystemExit("C++ compiler not found: " + args.cxx)

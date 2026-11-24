@@ -132,6 +132,13 @@ class LinuxPreflightTests(unittest.TestCase):
             dest = Path(cmd[cmd.index("--extract") + 1])
             (dest / "exefs").mkdir(parents=True)
             (dest / "romfs").mkdir()
+            # (what the game's start needs of a romfs, make_game.ROMFS_NEEDED, and the supported version's size table; the .zs ones
+            # start as zstd, so the damaged-file check reads them as whole)
+            zstd = b"\x28\xb5\x2f\xfd" + b"authored stand-in"
+            for name in ("Pack/ZsDic.pack.zs", "System/HeapSize/Product.Nin_Ounce_NVN2.HeapDef.byml.zs",
+                         "System/Resource/" + self.make.ROMFS_TABLE):
+                (dest / "romfs" / name).parent.mkdir(parents=True, exist_ok=True)
+                (dest / "romfs" / name).write_bytes(zstd)
             header = bytearray(0x60)
             header[:4] = b"NSO0"
             header[0x40:0x44] = bytes.fromhex(self.make.BUILD_ID)

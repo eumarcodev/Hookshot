@@ -41,7 +41,7 @@ void destroy_image(VkImage image, VmaAllocation) {
 // Keep submission code real; the queue executes captured command buffers only on advance().
 struct Recording { int slot = 0; VkCommandBuffer cmd{}, upload{}; VkFence fence{}; uint64_t value = 0, batch = 0, part = 0; bool submitted = false; };
 Recording* rec_cur = nullptr;
-uint64_t done_max = 20, oldest = UINT64_MAX, rec_seq = 0, batch_next = 0, batch_flushed = 0;
+uint64_t done_max = 20, oldest = UINT64_MAX, rec_seq = 0, batch_next = 0, batch_flushed = 1;
 VkSemaphore rec_timeline = reinterpret_cast<VkSemaphore>(uintptr_t(2));
 VkSemaphore batch_tl = reinterpret_cast<VkSemaphore>(uintptr_t(3));
 std::mutex rec_map_mu;
@@ -56,6 +56,8 @@ struct { std::vector<VkCommandBufferSubmitInfo> cbs; uint64_t signal = 0, rec = 
 uint64_t reflex_frame() { return 0; }   // (vk_reflex.cpp: no Reflex here)
 const void* reflex_submit_id(const void* next, uint64_t = ~0ull) { return next; }   // (vk_reflex.cpp: no tag without Reflex)
 std::chrono::steady_clock::time_point pend_since;
+VKAPI_ATTR VkResult VKAPI_CALL vkGetSemaphoreCounterValue(VkDevice, VkSemaphore, uint64_t* value) { *value = 0; return VK_SUCCESS; }   // (the batch's timeline: the GPU is busy with what was sent, so a held submit is not sent for idleness)
+void host_read_barrier(VkCommandBuffer) {}   // (vk_replay.cpp: a memory barrier only)
 int st_flushes = 0, st_reason[2]{};
 int64_t st_batched_cbs = 0;
 enum { FR_OTHER, FR_CAP, FR_READBACK }; int flush_reason = FR_OTHER;
@@ -102,6 +104,8 @@ VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit2(VkQueue, uint32_t count, const VkS
     }
     queued.push_back(q); return VK_SUCCESS;
 }
+// (vk_replay.cpp: the submit made again while the driver refuses it for want of memory; the spy never refuses)
+VkResult submit_or_retry(const VkSubmitInfo2& si, VkFence fence) { return vkQueueSubmit2(VK_NULL_HANDLE, 1, &si, fence); }
 void advance() {
     need(!queued.empty(), "queued GPU work");
     auto q = queued.front(); queued.pop_front();

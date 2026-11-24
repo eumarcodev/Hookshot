@@ -33,7 +33,10 @@ def main():
     flush = block(draw, "void draw_flush_recording(") if "void draw_flush_recording(" in draw else ""
     fixture = fixture.replace("/* FLUSH */", flush).replace("/* BEGIN */", block(draw, "void draw_begin_recording("))
     fixture = fixture.replace("/* SUBMIT */", block(replay, "void submit_recording("))
-    start = replay.index("        if (j->inits < 0) init_lost = true;")
+    # (the loop that submits the parallel segments, one at a time as each is done: the replay has another submit_job, in the
+    # early GPU path, whose first lines look the same and which the stream is not flushed by)
+    loop = replay.index("// (in order, each as soon as it is done)")
+    start = replay.index("        if (j->inits < 0) init_lost = true;", loop)
     end = replay.index("        if (res == VK_ERROR_DEVICE_LOST) device_lost();", start)
     end += len("        if (res == VK_ERROR_DEVICE_LOST) device_lost();")
     fixture = fixture.replace("/* SEGMENT */", replay[start:end])

@@ -108,6 +108,11 @@ bool driver_cache_only = false, quick_build = false, gate_busy = false, slow_ful
 int test_slow_ms() { return 0; }
 VkPipelineCache pcache = VK_NULL_HANDLE, driver_ask_cache = VK_NULL_HANDLE;
 uint64_t pcache_built_since_save = 0, st_pipelines = 0, st_pipeline_us = 0;
+bool pcache_misses_only() { return false; }   // (vk_draw.cpp, RX_VK_PCACHE_MISSES: no creation feedback asked for here)
+bool res_log_on() { return false; }   // (RX_VK_RES_LOG)
+void res_note_pipeline_use(VkPipeline) {}
+constexpr unsigned kUseVertex = 1;   // (vk_ledger.h)
+template<class... A> void ledger_mark(A&&...) {}   // (vk_ledger.h: RX_VK_LEDGER, not asked for here)
 
 // The Windows-only optimizer workaround is not the behavior under test.
 VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceProperties2(VkPhysicalDevice, VkPhysicalDeviceProperties2*) {}

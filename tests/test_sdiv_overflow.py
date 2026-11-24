@@ -100,6 +100,8 @@ def translate(cxx, tmp):
     if r.returncode:
         print(r.stdout)
         raise SystemExit("sdiv overflow: building suyu's translator failed")
+    if os.name == "nt":   # (python does not search PATH for a DLL's dependencies: llvm-mingw's libc++ and unwinder sit beside its compiler)
+        os.add_dll_directory(os.path.dirname(os.path.abspath(cxx)))
     import build_emit
     build_emit.build = lambda force=False: dll   # (not a64emit.dll beside the source)
     import a64emit

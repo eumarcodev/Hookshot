@@ -41,8 +41,15 @@ def cut(glue):
     end = glue.find("/* A crash nothing handles")
     if start < 0 or end < start:
         raise SystemExit("FAIL: mkw_glue.c has no commit_wait ... 'A crash nothing handles' stretch")
+    # (hos_reserve_guest_pages, the guest window in two reservations, sits in that stretch now: it calls the guest-pages
+    # substrate, which the fixture has none of, and has no part in the commit waits)
     at = glue.rfind("\n/*", 0, start)   # (with commit_wait's own comment)
-    return glue[at if at >= 0 else start:end]
+    code = glue[at if at >= 0 else start:end]
+    pages = code.find("/* HOS_GUEST_PAGES=1 (hos_guestpages.c)")
+    if pages >= 0:
+        close = code.index("\n}\n", code.index("int hos_reserve_guest_pages(", pages)) + 3
+        code = code[:pages] + code[close:]
+    return code
 
 
 def handlers(glue, code):

@@ -102,6 +102,7 @@ class Environment(unittest.TestCase):
             self.assertIn("__GL_SHADER_DISK_CACHE_PATH", q.job_env(base, "g", "shared", s, 42))
             self.assertNotIn("__GL_SHADER_DISK_CACHE_PATH", q.job_env(base, "b", "build", s, 42))
 
+    @unittest.skipIf(q.WINDOWS, "on_ram is always False on Windows (no RAM file system to avoid), the table is a Linux mount table")
     def test_ram_file_system(self):
         table = [("/", "btrfs"), ("/tmp", "tmpfs"), ("/tmp/disk", "ext4")]
         self.assertTrue(q.on_ram("/tmp/x", table))

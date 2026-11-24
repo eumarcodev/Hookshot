@@ -116,7 +116,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="key-slots-") as tmp:
         c, exe = Path(tmp) / "key_slots.cpp", Path(tmp) / "key-slots"
         c.write_text(src, encoding="utf-8")
-        subprocess.run([args.cxx, "-std=c++20", "-Wall", "-Wextra", "-Werror", "-Wno-unused-function", "-I", str(ROOT / "gpu" / "vk"),
+        subprocess.run([args.cxx, "-std=c++20", "-Wall", "-Wextra", "-Werror", "-Wno-unused-function", "-Wno-unused-but-set-global", "-I", str(ROOT / "gpu" / "vk"),
                         str(c), "-o", str(exe)], check=True)
         subprocess.run([str(exe)], check=True)
     print("PASS: a control's two keys are bound and cleared one at a time")

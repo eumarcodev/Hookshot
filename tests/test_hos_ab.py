@@ -354,11 +354,14 @@ def wiring_checks():
     if not 0 <= present.index("hos_ab_present();") < present.index("vk->nvn_present(t, crop)"):
         fail("host/rx_backend.c: rx_nvn_present does not count the frame (hos_ab_present) before the renderer presents")
     table = re.sub(r"/\*.*?\*/", "", block(backend, "static const MkwVkHost vk_host = {"), flags=re.S)
-    if [v.strip() for v in table.split(",") if v.strip()][-2] != "hos_ab_frame":
-        fail("host/rx_backend.c: vk_host does not end with hos_ab_frame (MkwVkHost.ab_frame, version 34)")
+    # (hos_ab_frame is version 35's field; version 36 added the Windows loader's resolver after it, a NULL elsewhere, in an #ifdef)
+    table = "\n".join(line for line in table.splitlines() if not line.lstrip().startswith("#"))
+    slots = [v.strip() for v in table.split(",") if v.strip()]
+    if "hos_ab_frame" not in slots or slots[slots.index("hos_ab_frame") + 1:] != ["host_vulkan_loader_proc", "NULL", "}"]:
+        fail("host/rx_backend.c: vk_host does not end with hos_ab_frame and the loader resolver after it (MkwVkHost.ab_frame, version 35; vulkan_loader_proc, 36)")
     api = (ROOT / "gpu/vk/vk_api.h").read_text(encoding="utf-8")
     if int(re.search(r"#define MKWVK_API_VERSION (\d+)", api).group(1)) < 35 or \
-            "int (*ab_frame)(int64_t from_ns, int64_t to_ns);\n} MkwVkHost;" not in api:
+            "int (*ab_frame)(int64_t from_ns, int64_t to_ns);" not in api or "uintptr_t (*vulkan_loader_proc)(void);\n} MkwVkHost;" not in api:
         fail("gpu/vk/vk_api.h: MkwVkHost does not end with ab_frame at version 34 or later")
     replay = (ROOT / "gpu/vk/vk_replay.cpp").read_text(encoding="utf-8")
     if "host->version >= 35 && host->ab_frame ? host->ab_frame(l_at, at) : -1" not in replay:

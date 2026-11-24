@@ -31,7 +31,7 @@ HEAD = r'''
 #include <thread>
 #include <vector>
 using VkResult=int; using VkPipeline=uintptr_t; using VkPipelineCache=uintptr_t;
-constexpr VkResult VK_SUCCESS=0; constexpr uintptr_t VK_NULL_HANDLE=0;
+constexpr VkResult VK_SUCCESS=0, VK_ERROR_OUT_OF_HOST_MEMORY=-1, VK_ERROR_OUT_OF_DEVICE_MEMORY=-2; constexpr uintptr_t VK_NULL_HANDLE=0;
 constexpr int VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO=10;
 constexpr int VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO=11;
 constexpr int VK_SHADER_STAGE_COMPUTE_BIT=12;
@@ -60,7 +60,9 @@ VkResult vkCreateComputePipelines(uintptr_t device,VkPipelineCache cache,unsigne
  CHECK(device==dev.device&&cache==pcache&&count==1&&allocator==nullptr&&out);
  CHECK(ci&&ci->sType==10&&ci->stage.sType==11&&ci->stage.stage==12&&ci->stage.module==0x2468&&ci->layout==0x1357);
  CHECK(ci->stage.pName&&std::string(ci->stage.pName)=="main");
- if(expected_ci)CHECK(ci==expected_ci); if(expected_out)CHECK(out==expected_out);
+ // (a failure is made once more without the optimizer, from a copy of the create info: guarded_compute)
+ if(expected_ci&&calls==0)CHECK(ci==expected_ci); if(expected_out)CHECK(out==expected_out);
+ if(calls>0)CHECK(ci!=expected_ci&&(ci->flags&VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT));
  ++calls;
  if(mode==1){*out=0xdead;RaiseException(EXCEPTION_ACCESS_VIOLATION,0,0,nullptr);}   // (a handle written, then the fault)
  if(mode==2){*out=VK_NULL_HANDLE;return -4;}
@@ -90,7 +92,8 @@ def main():
     if os.name != "nt":
         raise SystemExit("Windows structured exceptions required")
     source=(args.source/'gpu/vk/vk_draw.cpp').read_text(encoding='utf-8')
-    wrapper=block(source,'__declspec(noinline) VkResult guarded_compute(')
+    # (the SEH guard is guarded_compute_once; guarded_compute asks it again without the optimizer after a failure)
+    wrapper=block(source,'__declspec(noinline) VkResult guarded_compute_once(')+"\n"+block(source,'VkResult guarded_compute(')
     precompile=block(source,'void precompile_run(')
     arm=block(precompile,'if (i < computes.size()) {')
     # ci/made identities are checked at the boundary as well as inside the API spy.
@@ -109,11 +112,11 @@ int main(int argc,char**argv){
  if(which==4){
   mode=1;VkComputePipelineCreateInfo ci{10};ci.stage={11,12,0x2468,"main"};ci.layout=0x1357;VkPipeline out=0;
   expected_ci=&ci;expected_out=&out;
-  CHECK(guarded_compute(pcache,&ci,&out)==-77);CHECK(calls==1&&out==0&&logged==1&&faults_noted==1);return 0;
+  CHECK(guarded_compute(pcache,&ci,&out)==-77);CHECK(calls==2&&out==0&&faults_noted==2);return 0;
  }
  mode=which==1?1:which==2?2:0;pre.abandoned=which==3;
  std::thread worker([&]{actual_arm(program,&pre);});worker.join();
- CHECK(completed&&calls==1);
+ CHECK(completed&&calls==(which==1||which==2?2:1));
  CHECK(pre.computes_cached==0&&pre.computes_compiled==(which==0||which==3?1u:0u)&&pre.computes_failed==(which==1||which==2?1u:0u));
  if(which==0)CHECK(program.compute_pipeline==0xcafe&&destroys==0);
  if(which==1||which==2)CHECK(program.compute_pipeline==0&&destroys==0);

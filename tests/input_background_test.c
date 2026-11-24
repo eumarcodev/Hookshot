@@ -94,7 +94,14 @@ void hos_log(const char *format, ...) {
     }
 }
 HWND GetForegroundWindow(void) { focus_queries++; return (HWND)(uintptr_t)(front ? 1 : 2); }
-DWORD GetWindowThreadProcessId(HWND window, DWORD *pid) { *pid = window == (HWND)(uintptr_t)1 ? 10 : 20; return 1; }
+DWORD GetWindowThreadProcessId(HWND window, DWORD *pid) { if (pid) *pid = window == (HWND)(uintptr_t)1 ? 10 : 20; return 1; }
+/* (host/nn_hid.c pos() on Windows: a US key by its place in the layout of the window in front; the fixture has one layout,
+   whose lookup finds nothing, so a key stays itself) */
+typedef void *HKL;
+typedef unsigned UINT;
+enum { VK_OEM_MINUS = 0xBD, VK_OEM_PLUS = 0xBB, VK_SUBTRACT = 0x6D, VK_ADD = 0x6B, MAPVK_VSC_TO_VK = 1 };
+HKL GetKeyboardLayout(DWORD thread) { (void)thread; return (HKL)(uintptr_t)1; }
+UINT MapVirtualKeyExW(UINT code, UINT type, HKL layout) { (void)code; (void)type; (void)layout; return 0; }
 DWORD GetCurrentProcessId(void) { return 10; }
 LONG_PTR GetWindowLongPtrA(HWND window, int index) { (void)window; (void)index; return 0; }
 int GetClassNameA(HWND window, char *text, int size) { (void)window; return snprintf(text, (size_t)size, "fixture"); }

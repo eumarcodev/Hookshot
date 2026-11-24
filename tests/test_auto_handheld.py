@@ -58,6 +58,10 @@ static ::auto_settings::Hardware detect(const Props& p) {
 @DETECT@
     return hw;
 }
+#ifdef _WIN32
+static int setenv(const char* name, const char* value, int) { return _putenv_s(name, value); }
+static int unsetenv(const char* name) { return _putenv_s(name, ""); }   // (an empty value removes it)
+#endif
 static int fails;
 static void check(const char* what, int type, const char* name, const char* steamdeck, int handheld, int tier, unsigned vram) {
     // (handheld -1: either; an integrated GPU is Minimum whichever)

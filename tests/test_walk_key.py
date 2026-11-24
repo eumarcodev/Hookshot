@@ -87,6 +87,17 @@ static void ReleaseSRWLockShared(SRWLOCK *p) { (void)p; }
 #define VK_CONTROL 0x11
 #define VK_MENU 0x12
 #define VK_CAPITAL 0x14
+#ifdef _WIN32   /* (pos() looks a key up in the window in front's layout on Windows: no layout here, the key stays where it is) */
+#define VK_OEM_MINUS 0xBD
+#define VK_OEM_PLUS 0xBB
+#define MAPVK_VSC_TO_VK 1
+typedef void *HKL;
+typedef unsigned UINT;
+static HKL GetKeyboardLayout(DWORD t) { (void)t; return 0; }
+static DWORD GetWindowThreadProcessId(void *w, void *p) { (void)w; (void)p; return 0; }
+static void *GetForegroundWindow(void) { return 0; }
+static UINT MapVirtualKeyExW(UINT c, UINT t, HKL l) { (void)c; (void)t; (void)l; return 0; }
+#endif
 #define VK_SPACE 0x20
 #define VK_LEFT 0x25
 #define VK_UP 0x26

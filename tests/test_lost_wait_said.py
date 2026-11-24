@@ -40,10 +40,13 @@ def block(text, marker, start=0):
 
 FIXTURE = r"""
 #include <vulkan/vulkan_core.h>
+#include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
+#include <mutex>
 #include <string>
 #include <vector>
 static std::vector<std::string> logs;
@@ -58,6 +61,9 @@ static void logf(const char* format, ...) {
 static int lost_calls = 0;
 [[maybe_unused]] static void device_lost(const char* = nullptr) { lost_calls++; }
 struct Dev { VkDevice device = VK_NULL_HANDLE; } dev;
+static bool env_on(const char*) { return false; }   // (RX_VK_CAPWAIT_TRACE: off)
+static std::atomic<uint64_t> q_values{0};   // (the fence values handed out)
+static int64_t vk_value_submitted_ns(uint64_t) { return 0; }   // (no submission times here)
 static VkSemaphore timeline = (VkSemaphore)(uintptr_t)1, rec_timeline = (VkSemaphore)(uintptr_t)2;
 static VkResult wait_gives = VK_TIMEOUT;
 static uint64_t counter = 0;

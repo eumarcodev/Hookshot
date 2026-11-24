@@ -76,6 +76,8 @@ def main():
         sound = between(sdl, '/* ---- sound ---- */', '/* ---- (hookshot) microphones:')
         posix = (args.source/'host/posix/win32_posix.c').read_text(encoding='utf-8')
         wave = posix[posix.index('/* ---- waveOut on SDL\'s audio'):]
+        # (the section ends where the next one begins: the timer and clock calls after it need the file's own Win32 types)
+        wave = wave[:wave.index('/* ---- (Hookshot) the performance overlay')]
         # The real files are separate translation units. Keep weak declarations before definitions in this combined fixture.
         split = wave.index('typedef struct {')
         sound = wave[:split] + sound

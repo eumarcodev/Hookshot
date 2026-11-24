@@ -19,6 +19,9 @@ FIXTURE = r'''
 #include <cstdio>
 #include <cstdlib>
 #include <thread>
+#ifdef _WIN32
+#include <windows.h>   // (the present's QueryPerformanceCounter)
+#endif
 @@FUNCTION@@
 int main() {
     for (int i = 0; i < 3; i++) {

@@ -618,6 +618,8 @@ def main():
                      between(menu, "bool output_size_char(", "struct FieldRow {"),
                      between(menu, "TextField* editing =", "// ---- (hookshot) the Controls page:")])
     host_cut = between(backend, "enum { TEXT_QUEUE", "static const MkwVkHost vk_host")
+    # (the Vulkan loader's lookup, Windows only: the fixture has no Win32 API, and nothing here calls it)
+    host_cut = re.sub(r"#ifdef _WIN32\nstatic uintptr_t host_vulkan_loader_proc\(void\).*?\n#endif\n", "", host_cut, flags=re.S)
     focused = block(menu, "if (open_now.load() && editing) {")
     win = (ROOT / "host/display.c").read_text(encoding="utf-8")
     win_keys = block(win[win.index("case WM_KEYDOWN: {"):], "if (hos_text_focus()) {")

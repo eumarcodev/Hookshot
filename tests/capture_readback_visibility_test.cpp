@@ -104,6 +104,7 @@ void read_shot(bool generated, bool owned = false) {
     }
     bool shot = true;
     VkImage made_src = reinterpret_cast<VkImage>(uintptr_t(123));
+    int made_index = 0;   // (vk_replay.cpp: the made frame's number in its set, for the file name)
     uint64_t value = 17;
     int64_t presents = 1;
     const char* shots = "private-test";

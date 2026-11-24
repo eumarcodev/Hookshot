@@ -31,7 +31,7 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPS = os.path.join(ROOT, "_deps")
 WORKFLOW = os.path.join(ROOT, ".github", "workflows", "vulkan-dlss.yml")
-CI_PACKAGES = ["zstandard==0.25.0", "pillow==13.0.0", "numpy==2.5.4", "lz4==4.4.5"]   # (source-regressions.yml's)
+CI_PACKAGES = ["zstandard==0.25.0", "pillow==13.0.0", "numpy==2.5.4", "lz4==4.4.5", "unicorn==2.1.4"]   # (source-regressions.yml's; unicorn: tests/test_insn_fixed_convert.py)
 ALLOWED_IMPORTS = re.compile(r"^(kernel32|user32|gdi32|advapi32)\.dll$|^api-ms-win-crt-[a-z0-9-]+\.dll$", re.I)
 FAIL_LINE = re.compile(r"^FAIL\s+[\d.]+s\s+(tests/\S+)", re.M)
 WIN = os.name == "nt"
@@ -73,7 +73,7 @@ def test_python():
 def test_env():
     """As CI's "Every test" step has it: llvm-mingw's compilers on PATH, and the pinned SPIR-V and Vulkan headers."""
     m = mingw_dir()
-    env = {"PATH": os.path.join(m, "bin") + os.pathsep + os.environ["PATH"]} if m else {}
+    env = {"PATH": os.path.join(m, "bin") + os.pathsep + os.environ["PATH"], "HOOKSHOT_MINGW": m} if m else {}   # (HOOKSHOT_MINGW: the a64 checks take the target and runtime flags from it)
     for var, sub in (("HOOKSHOT_SPIRV_HEADERS", "spirv-headers"), ("HOOKSHOT_VULKAN_HEADERS", "vulkanheaders")):
         base = os.path.join(DEPS, "cpm", sub)
         found = sorted(glob.glob(os.path.join(base, "*", "include")))

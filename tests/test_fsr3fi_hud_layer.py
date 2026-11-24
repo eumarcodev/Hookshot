@@ -35,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))   # (tests/srccut.py: p
 from srccut import block   # noqa: E402
 
 RUN_ALL_ARGS = ["--cxx", "{cxx}", "--glslang", "{glslang}"]
+RUN_ALL_SKIP = {"windows": "needs glslang: checked on Linux"}
 
 ROOT = Path(__file__).resolve().parents[1]
 SHADERS = ROOT / "gpu" / "vk" / "shaders"
@@ -91,6 +92,7 @@ static vec3 operator+(vec3 a, float s) { return {a.r + s, a.g + s, a.b + s}; }
 static bool operator==(vec3 a, vec3 b) { return a.r == b.r && a.g == b.g && a.b == b.b; }
 static bool operator==(vec4 a, vec4 b) { return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w; }
 static float dot(vec3 a, vec3 b) { return a.r * b.r + a.g * b.g + a.b * b.b; }
+static float abs(float a) { return std::fabs(a); }   // (GLSL's abs of a float: <cstdlib>'s is the integer one)
 static vec3 abs(vec3 a) { return {std::fabs(a.r), std::fabs(a.g), std::fabs(a.b)}; }
 static float clamp(float v, float lo, float hi) { return v < lo ? lo : v > hi ? hi : v; }
 static vec3 clamp(vec3 v, float lo, float hi) { return {clamp(v.r, lo, hi), clamp(v.g, lo, hi), clamp(v.b, lo, hi)}; }

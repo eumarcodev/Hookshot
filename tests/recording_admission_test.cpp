@@ -121,6 +121,7 @@ std::unordered_map<int, int>& handle_hits() { static thread_local std::unordered
 struct ViewFast { uint64_t key = ~0ull; };
 std::array<ViewFast, 1024>& view_fast() { static thread_local std::array<ViewFast, 1024> a; return a; }
 struct Program {};
+struct ProgSlots {}; std::unordered_map<const Program*, ProgSlots>& prog_slots() { static thread_local std::unordered_map<const Program*, ProgSlots> m; return m; }   // (vk_draw.cpp: emptied with handle_hits)
 constexpr int kNvnStages = 8;
 int desc_reuse_level() { return 2; }   // (vk_draw.cpp: RX_VK_DESC_REUSE and the Descriptor reuse row; the banks are kept)
 /* BANK_CACHE */

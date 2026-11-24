@@ -53,11 +53,14 @@ struct {
     bool float_atomic_add = false;
     struct {
         bool shaderFloat16 = true;
+        bool shaderInt8 = true;   // (make_profile: 8-bit integers where the GPU has them)
         VkBool32 shaderBufferInt64Atomics = 1;
         bool shaderStorageImageArrayNonUniformIndexing = false, shaderUniformTexelBufferArrayNonUniformIndexing = false,
              shaderStorageTexelBufferArrayNonUniformIndexing = false;
     } vk12;
     struct { struct { uint64_t minStorageBufferOffsetAlignment = 16; } limits; } props;
+    struct { bool shaderInt16 = true; } features;   // (and 16-bit)
+    bool mesh_shader = false, mesh_fallback = false;   // (the stamp's mesh word: no mesh shaders, no compute fallback here)
     // (device_policy.h's fields make_profile reads: no long warp path, no fragment shuffle fallback, no gather offset)
     struct { bool warp64 = false, frag_shuffle_fallback = false, gather_offset = false; } policy;
     struct {

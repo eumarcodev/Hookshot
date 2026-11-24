@@ -48,6 +48,14 @@ static int env_on(const char *name) { return !strcmp(name, "HOS_HEADLESS"); }   
 static void *hos_guest_range(uint64_t a, uint64_t n) { (void)a, (void)n; return NULL; }
 void hos_alloc_gave_up(size_t n, const char *what);
 
+/* (HOS_GUEST_PAGES off, as by default: the guest-pages substrate is not ready, so a commit is the plain one; hl_drop marks nothing) */
+static void hl_drop_kernel_begin(uint64_t lo, uint64_t hi) { (void)lo, (void)hi; }
+static void hl_drop_kernel_end(void) {}
+static int hos_gp_ready(void) { return 0; }
+static int hos_gp_fault(void *p, int write) { (void)p, (void)write; return 0; }
+static int hos_gp_touches(const void *p, size_t n) { (void)p, (void)n; return 0; }
+static int hos_gp_commit(void *p, size_t n) { (void)p, (void)n; return 0; }
+static int hos_plain_commit(void *p, size_t n) { return VirtualAlloc(p, (SIZE_T)n, MEM_COMMIT, PAGE_READWRITE) != NULL; }
 #include "stack_commit.inc"
 
 static void register_handlers(void) {

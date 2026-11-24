@@ -242,7 +242,7 @@ def check_device(tree):
     device = section(main, 'bool create_device() {', 'vkCreateDevice(dev.physical, &ci', 'vk_main.cpp create_device')
     failures = []
     for text in ('f.pNext = &f11, f11.pNext = &f12', 'vkGetPhysicalDeviceFeatures2(dev.physical, &f);', 'dev.vk12 = f12;',
-                 'ci.pNext = &f;'):
+                 'void* chain = &f;', 'ci.pNext = chain;'):   # (the chain starts at f: XeSS's features are added to its end)
         if text not in device:
             failures.append('create_device: no %r before vkCreateDevice' % text)
     if re.search(r'\.shader(StorageImage|UniformTexelBuffer|StorageTexelBuffer)ArrayNonUniformIndexing\s*=[^=]', main):

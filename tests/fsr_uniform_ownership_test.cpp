@@ -65,7 +65,12 @@ std::atomic<uint64_t> stream_extra{0},stream_grown{0},stream_peak{0},pools_extra
 VkCommandBuffer rec_cmd{};
 uint64_t rec_value=0,targets_serial=0;
 VkBuffer zero_buffer{}; VmaAllocation zero_alloc{};
-VkDescriptorPool make_pool() { return handle<VkDescriptorPool>(); }
+VkDescriptorPool make_pool(uint32_t=0) { return handle<VkDescriptorPool>(); }
+uint32_t pool_shift_first() { return 0; }   // (vk_draw.cpp: a slot's pool starts whole here)
+std::atomic<uint64_t> pools_grown{0};
+struct ProgSlots {}; std::unordered_map<const void*, ProgSlots>& prog_slots() { static std::unordered_map<const void*, ProgSlots> m; return m; }   // (vk_draw.cpp: the program texture slots, emptied with handle_hits)
+namespace fps_stats { enum RenderPart { kRtWork, kRtWorkers, kRtGpu, kRtIdle, kRtParts }; }
+struct FpsRtWait { explicit FpsRtWait(int) {} };   // (vk_fps.h: the FPS counter's render lane)
 VKAPI_ATTR VkResult VKAPI_CALL vkResetDescriptorPool(VkDevice,VkDescriptorPool,VkDescriptorPoolResetFlags) { return VK_SUCCESS; }
 VKAPI_ATTR void VKAPI_CALL vkDestroyDescriptorPool(VkDevice,VkDescriptorPool,const VkAllocationCallbacks*) {}
 struct Pass {}; Pass& pass() { static Pass p;return p; }

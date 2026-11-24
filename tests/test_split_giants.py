@@ -520,7 +520,10 @@ class Programs:
                     calls += m.group(1).startswith("call")
                     jumps += m.group(1).startswith("jmp")
         print("%s: the pieces name each other in %d jumps and %d calls" % (tag, jumps, calls))
-        if direct:
+        # (preserve_none is clang 19's: with an older clang, Ubuntu 24.04's 18, the split file takes its own fallback, which has no
+        # musttail jump from a piece to the next, so the jumps are asked for only where the compiler has the attribute)
+        has_hop = subprocess.run([self.cc, "-x", "c", "-fsyntax-only", "-", "-Wno-everything"], input=HOP_PROBE, capture_output=True, text=True).returncode == 0
+        if direct and has_hop:
             check(jumps > 0 and calls == 0, "%s: the pieces jump to each other (%d jumps, %d calls)" % (tag, jumps, calls))
         else:
             check(jumps == 0 and calls == 0, "%s: the pieces never name each other (%d jumps, %d calls)" % (tag, jumps, calls))
@@ -550,6 +553,7 @@ class Programs:
 
 
 MODES = ((True, "direct"), (False, "trampoline"))
+HOP_PROBE = "#if !__has_attribute(preserve_none) || !__has_attribute(musttail)\n#error no\n#endif\n"
 
 
 def compiled_checks(cc):

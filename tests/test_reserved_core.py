@@ -244,7 +244,8 @@ static Host host_v = {
 };
 static Host* host = &host_v;
 static bool async_on() { return false; }
-static const uint8_t* memory_as_submitted(uint64_t, const uint8_t* p, uint64_t, std::vector<uint8_t>&) { return p; }
+thread_local bool tl_first_upload = false, tl_reupload = false;   // (vk_texture.cpp: the upload being made is the texture's first, or a repeat)
+static const uint8_t* memory_as_submitted(uint64_t, const uint8_t* p, uint64_t, std::vector<uint8_t>&, bool, bool) { return p; }
 @REPLAY@
 @TEXTURE@
 }

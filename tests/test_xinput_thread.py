@@ -160,7 +160,7 @@ def main():
         src = Path(tmp) / "t.c"
         src.write_text(code, encoding="utf-8")
         exe = Path(tmp) / "t.exe"
-        subprocess.run([a.cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-include", ENV_ON_H, "-Wall", "-Wextra", "-Werror", "-Wno-unused-function", "-Wno-unused-variable",
+        subprocess.run([a.cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-include", ENV_ON_H, "-Wall", "-Wextra", "-Werror", "-Wno-unused-function", "-Wno-unused-variable", "-Wno-unused-but-set-global",
                         "-pthread", "-o", str(exe), str(src)], check=True)
         r = subprocess.run([str(exe)], capture_output=True, text=True)
         sys.stdout.write(r.stdout)
