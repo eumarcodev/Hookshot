@@ -44,3 +44,26 @@ Finish through a pull request when the change needs CI or review: push the branc
 
 `source-regressions` and `vulkan-dlss` run on pushes to `main` and `develop`. Builds (`linux-appimage`,
 `windows-builder`) run for pull requests and for pushes to `main` and tags. `release.yml` stays on `main`.
+
+## Conventional Commits and versions
+
+The version rules are in [versioning.md](versioning.md): release-please reads the Conventional Commit subjects on
+`main` (`feat` minor, `fix` and `perf` patch, `!` major) and writes the changelog and the tag.
+
+- **Into `develop`: squash**, with a Conventional Commit title (the *PR title* check enforces it). One commit per
+  change, so each is a changelog line.
+- **Into `main`: fast-forward** (`git merge --ff-only develop` or the release/hotfix branch), never a merge commit and
+  never a squash of the whole release. A merge commit's subject is not read, and a squash would turn a release into one
+  changelog line. The commits from `develop` arrive on `main` as they are.
+- **Back-merge `main` into `develop`** after a release or hotfix (a merge commit is fine there).
+- Do not run `git flow release finish` with its default merge commit and its own tag: the tag comes from the Release
+  workflow. Finish by hand as above.
+
+For local commits, enable the subject check once per clone:
+
+```powershell
+git config core.hooksPath scripts/hooks
+```
+
+It rejects a subject that is not `type(scope)!: description`, with the same types as the PR title check
+(`tests/test_commit_msg_hook.py` keeps the two lists equal).

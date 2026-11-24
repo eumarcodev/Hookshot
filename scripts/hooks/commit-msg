@@ -1,0 +1,4 @@
+#!/bin/sh
+# Local check that a commit subject is a Conventional Commit (docs/versioning.md). Enable it once per clone with:
+#   git config core.hooksPath scripts/hooks
+exec python -I -B "$(dirname "$0")/commit_msg_check.py" "$1"
