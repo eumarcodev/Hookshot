@@ -14,6 +14,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "target_pool.h"   // (the pool's bound and idle rule: gpu/vk/target_pool.h, as vk_texture.cpp includes it)
+
 // ---- the fixture's stubs: the GPU, the allocator, and the clock ----
 using VmaAllocation = void*;
 struct Device {
@@ -21,6 +23,9 @@ struct Device {
 };
 Device dev;
 uint64_t frame_no = 0, total_bytes = 0, destroy_gen = 0;
+uint64_t rec_value = 0;
+void logf(const char*, ...) {}
+bool vram_usage(uint64_t*, uint64_t*) { return false; }   // (pool_cap: the driver's allowance is not known here: the pool's minimum)
 int destroyed_images = 0, destroyed_views = 0;
 void destroy_image(VkImage, VmaAllocation) {
     destroyed_images++;
@@ -31,6 +36,7 @@ extern "C" VKAPI_ATTR void VKAPI_CALL vkDestroyImageView(VkDevice, VkImageView, 
 // (the real Texture is larger; destroy_later reads these)
 struct Texture {
     uint64_t last_value = 0;
+    uint64_t defer_frame = 0;   // (destroy_later: held back by the upload budget)
     VkImage image = VK_NULL_HANDLE;
     VmaAllocation allocation = nullptr;
     std::vector<VkDeviceMemory> sparse_chunks;
@@ -46,10 +52,20 @@ struct Texture {
     std::vector<BlockAttachment> block_attachments;
 };
 
+void destroy_gen_bump(const Texture*) {}
+void defer_note_done(Texture&, bool) {}
+
 /* DEAD */
 std::deque<Dead> dead;
 
+// (in vk_texture.cpp the pool is in an anonymous namespace of mkwvk, where its variable target_pool hides the namespace
+// target_pool.h opens, so that target_pool::default_mb still reads)
+namespace mkwvk {
+namespace {
 /* ACTUAL */
+}  // namespace
+}  // namespace mkwvk
+using namespace mkwvk;
 
 static int fails = 0;
 #define CHECK(c)                                                          \
@@ -106,7 +122,7 @@ int main() {
         CHECK(taken_image == image);
         CHECK(taken_allocation == allocation);
         CHECK(taken_views.size() == 1 && taken_views.begin()->second == view);
-        CHECK(st_pool_reused == 1 && st_pool_destroyed == 0);
+        CHECK(st_pool_reused == 1 && st_pool_destroyed == 0 && st_pool_made == 0);   // (made new: counted where the image is made, not here)
         CHECK(destroyed_images == 0 && destroyed_views == 0);
         CHECK(pool_n == 0 && pool_bytes == 0);
         CHECK(total_bytes == 0);
