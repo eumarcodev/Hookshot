@@ -47,6 +47,16 @@ VkCommandBuffer last_barrier_cmd{};
 uint64_t last_barrier_epoch = 0;
 bool env_on(const char*) { return false; }
 struct GprofSpan { GprofSpan(VkCommandBuffer, const char*) {} };
+// (full_barrier's dedupe by command buffer inside a parallel replay (RX_VK_BARRIER_DEDUPE_PAR, vk_work.h's counts) and its trust
+// point: off here, so these checks run the serial path; the counts they read are plain)
+std::atomic<uint64_t> foreign_work{0}, all_work_by_cmd[64]{}, other_work_by_cmd[64]{}, xfer_work_by_cmd[64]{};
+std::atomic<uint64_t>& all_work_slot(VkCommandBuffer c) { return all_work_by_cmd[((uintptr_t)c >> 4) & 63]; }
+std::atomic<uint64_t>& other_work_slot(VkCommandBuffer c) { return other_work_by_cmd[((uintptr_t)c >> 4) & 63]; }
+uint64_t last_barrier_cmd_work = 0, last_barrier_foreign = 0, last_barrier_other = 0, last_barrier_xfer = 0;
+std::atomic<int64_t> st_barriers_left_out_par{0};
+bool barrier_dedupe_par_on() { return false; }
+void note_trust_point(VkCommandBuffer) {}
+void logf(const char*, ...) {}
 struct BufferRef { VkBuffer buffer; uint64_t offset; explicit operator bool() const { return buffer != VK_NULL_HANDLE; } };
 BufferRef gpu_buffer_bind(uint64_t gpu, uint64_t n, bool write) {
     assert(write);
