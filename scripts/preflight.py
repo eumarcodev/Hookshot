@@ -1,6 +1,6 @@
 """What CI runs, run here before a pull request is opened (CONTRIBUTING.md, "Before you open a pull request").
 
-    python -I scripts/preflight.py [--setup] [--skip build|tests] [--base origin/develop]
+    python -I scripts/preflight.py [--setup] [--skip build|tests|native] [--base origin/develop]
 
   --setup   Windows: fetch what the renderer's build needs into _deps/ (git-ignored): the pinned llvm-mingw and the three
             header repositories at the commits .github/workflows/vulkan-dlss.yml pins. Needs the network, once.
@@ -20,6 +20,7 @@ not a pass: say so in the pull request. The Linux AppImage job and the Linux run
 stand in for them.
 """
 import argparse
+import glob
 import os
 import re
 import shutil
@@ -70,8 +71,15 @@ def test_python():
 
 
 def test_env():
+    """As CI's "Every test" step has it: llvm-mingw's compilers on PATH, and the pinned SPIR-V and Vulkan headers."""
     m = mingw_dir()
-    return {"PATH": os.path.join(m, "bin") + os.pathsep + os.environ["PATH"]} if m else {}
+    env = {"PATH": os.path.join(m, "bin") + os.pathsep + os.environ["PATH"]} if m else {}
+    for var, sub in (("HOOKSHOT_SPIRV_HEADERS", "spirv-headers"), ("HOOKSHOT_VULKAN_HEADERS", "vulkanheaders")):
+        base = os.path.join(DEPS, "cpm", sub)
+        found = sorted(glob.glob(os.path.join(base, "*", "include")))
+        if found:
+            env[var] = found[-1]
+    return env
 
 
 def header_pins():
@@ -161,7 +169,7 @@ def build():
 
 
 def failing(root):
-    code, out = run([test_python(), "-I", "-B", os.path.join("tests", "run_all.py"), "--jobs", str(max(2, (os.cpu_count() or 4) // 2))],
+    code, out = run([test_python(), "-I", "-B", os.path.join("tests", "run_all.py"), "--strict", "--jobs", str(max(2, (os.cpu_count() or 4) // 2))],
                     cwd=root, env=test_env())
     m = re.search(r"(\d+) passed, (\d+) failed, (\d+) skipped", out)
     return set(FAIL_LINE.findall(out)), (m.groups() if m else ("?", "?", "?"))
@@ -177,7 +185,7 @@ def tests(base):
                                      ", llvm-mingw on PATH" if test_env() else ""))
     mine, n_mine = failing(ROOT)
     say("%s passed, %s failed, %s skipped" % n_mine)
-    cache = os.path.join(DEPS, "base-failing-%s.txt" % sha[:12])
+    cache = os.path.join(DEPS, "base-failing-strict-%s.txt" % sha[:12])
     if os.path.isfile(cache):
         theirs = set(open(cache, encoding="utf-8").read().split())
         say("checks on %s: its failures from %s" % (base, os.path.relpath(cache, ROOT)))
@@ -198,6 +206,13 @@ def tests(base):
         with open(cache, "w", encoding="utf-8") as f:
             f.write("\n".join(sorted(theirs)) + "\n")
     new = sorted(mine - theirs)
+    # (a check that fails with eight others running and passes alone is load, not the change: each new failure is run again
+    # by itself, and only what fails again counts. The ones that passed are named, so a flaky check is not hidden)
+    for name in list(new):
+        code, _ = run([test_python(), "-I", "-B", os.path.join("tests", "run_all.py"), "--strict", name], env=test_env())
+        if code == 0:
+            say("%s failed in the full run and passes alone (load): not counted" % name)
+            new.remove(name)
     old = sorted(mine & theirs)
     if old:
         say("%d checks fail here and on %s: not yours (e.g. %s)" % (len(old), base, ", ".join(old[:3])))
@@ -208,10 +223,67 @@ def tests(base):
     return 0
 
 
+def vsdevcmd():
+    vw = os.path.join(os.environ.get("ProgramFiles(x86)", ""), "Microsoft Visual Studio", "Installer", "vswhere.exe")
+    if not os.path.isfile(vw):
+        return None
+    code, out = run([vw, "-latest", "-products", "*", "-version", "[17.0,18.0)", "-requires",
+                     "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath"])
+    root = out.strip().splitlines()[0] if code == 0 and out.strip() else ""
+    path = os.path.join(root, "Common7", "Tools", "VsDevCmd.bat")
+    return path if root and os.path.isfile(path) else None
+
+
+def native():
+    """CI's Windows-only steps (source-regressions.yml, part 1): the MSVC checks and the Builder's .NET checks.
+    0 passed, 1 failed, 2 could not run (no Visual Studio 2022 C++ tools, or no dotnet)."""
+    if not WIN:
+        say("native checks are Windows' (MSVC, .NET): NOT RUN here")
+        return 2
+    dev = vsdevcmd()
+    dotnet = shutil.which("dotnet")
+    if not dev or not dotnet:
+        say("native checks NOT RUN: %s" % ("no Visual Studio 2022 with the C++ tools" if not dev else "no dotnet"))
+        return 2
+    tmp = os.path.join(DEPS, "native")
+    os.makedirs(tmp, exist_ok=True)
+    py = test_python()
+    cmd = os.path.join(tmp, "msvc.cmd")
+    lines = ["@echo off",
+             'call "%s" -arch=x64 -host_arch=x64 >nul' % dev,
+             "if errorlevel 1 exit /b 1",
+             r'cl /nologo /std:c++17 /W4 /WX /EHsc /Fo"%s\present_rect_test.obj" /Fe:"%s\present_rect_test.exe" '
+             r'gpu\vk\tests\present_rect_test.cpp' % (tmp, tmp),
+             "if errorlevel 1 exit /b 1",
+             r'"%s\present_rect_test.exe"' % tmp,
+             "if errorlevel 1 exit /b 1",
+             '"%s" -I -B tests/test_invalidate_vcore.py --cxx cl' % py]
+    with open(cmd, "w", newline="") as f:
+        f.write("\r\n".join(lines) + "\r\n")
+    steps = [("MSVC checks (present_rect_test, test_invalidate_vcore)", ["cmd", "/c", cmd])]
+    workers = os.path.join("tests", "builder_workers", "BuilderWorkersTests.csproj")
+    if os.path.isfile(os.path.join(ROOT, workers)):
+        steps.append(("Builder worker delivery", [dotnet, "run", "--project", workers, "--configuration", "Release", "--", py]))
+    else:
+        say("Builder worker delivery skipped: %s is not in the repository (the workflow step is stale)" % workers)
+    steps.append(("Compile Windows Builder", [dotnet, "build", os.path.join("builder", "HookshotBuilder", "HookshotBuilder.csproj"),
+                                              "--configuration", "Debug", "-p:NuGetAudit=false"]))
+    failed = []
+    # (a stray quote in one PATH entry, as some installers leave, breaks VsDevCmd.bat's own parsing: "\Windows was unexpected")
+    clean_path = os.pathsep.join(e.replace('"', "") for e in os.environ["PATH"].split(os.pathsep) if e.strip())
+    for name, c in steps:
+        code, out = run(c, env={"PATH": clean_path})
+        say("%s: %s" % (name, "ok" if code == 0 else "FAILED"))
+        if code:
+            failed.append(name)
+            print(out[-1500:])
+    return 1 if failed else 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--setup", action="store_true")
-    ap.add_argument("--skip", action="append", default=[], choices=["build", "tests"])
+    ap.add_argument("--skip", action="append", default=[], choices=["build", "tests", "native"])
     ap.add_argument("--base", default="origin/develop")
     a = ap.parse_args()
     if a.setup:
@@ -219,6 +291,8 @@ def main():
         if code:
             return code
     results = {}
+    if "native" not in a.skip:
+        results["MSVC and .NET checks"] = native()
     if "build" not in a.skip:
         results["renderer build"] = build()
     if "tests" not in a.skip:
