@@ -2216,16 +2216,16 @@ done:
 static int pipe_security(void) {
     HANDLE token;
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) return 0;
-    DWORD64 info[64];   /* (a SID is at most 68 bytes) */
+    union { DWORD64 raw[64]; TOKEN_USER user; TOKEN_APPCONTAINER_INFORMATION ac; } info;   /* (a SID is at most 68 bytes; a union, not casts of one array) */
     DWORD len = 0;
     char *user = NULL, *ac = NULL;
-    if (!GetTokenInformation(token, TokenUser, info, sizeof info, &len) ||
-        !ConvertSidToStringSidA(((TOKEN_USER *)info)->User.Sid, &user))
+    if (!GetTokenInformation(token, TokenUser, &info, sizeof info, &len) ||
+        !ConvertSidToStringSidA(info.user.User.Sid, &user))
         return CloseHandle(token), 0;
     DWORD is_ac = 0;
     if (GetTokenInformation(token, TokenIsAppContainer, &is_ac, sizeof is_ac, &len) && is_ac) {
-        const TOKEN_APPCONTAINER_INFORMATION *t = (const TOKEN_APPCONTAINER_INFORMATION *)info;
-        if (!GetTokenInformation(token, TokenAppContainerSid, info, sizeof info, &len) || !t->TokenAppContainer ||
+        const TOKEN_APPCONTAINER_INFORMATION *t = &info.ac;
+        if (!GetTokenInformation(token, TokenAppContainerSid, &info, sizeof info, &len) || !t->TokenAppContainer ||
             !ConvertSidToStringSidA(t->TokenAppContainer, &ac)) {
             ctl_log("control: an AppContainer token whose SID could not be read (%lu)", GetLastError());
             CloseHandle(token), LocalFree(user);

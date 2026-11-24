@@ -112,6 +112,13 @@ jobs:
           "$tool_dir/bin/glslangValidator" --version
           echo "$tool_dir/bin" >> "$GITHUB_PATH"
 
+      - name: llvm-mingw, the compiler the checks use on a PC and the renderer builds with
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          m="$(python -I scripts/release_parts.py llvm-mingw "$RUNNER_TEMP/llvm")"
+          echo "HOOKSHOT_MINGW=$m" >> "$GITHUB_ENV"
+          echo "$m/bin" >> "$GITHUB_PATH"
       # (the steps below all run when one before them failed, so one run shows every failure)
       - name: Check Windows native source regressions
         if: ${{ !cancelled() && runner.os == 'Windows' && matrix.shard == '1/2' }}
