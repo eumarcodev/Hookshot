@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../gpu/vk/compat/hookshot_env.h"   /* (env_on, env_int: the switches' one rule) */
 
 #if defined(_WIN32) && !defined(__EMSCRIPTEN__)
 #define WIN32_LEAN_AND_MEAN
@@ -36,11 +37,11 @@ static int hs_first = -1, hs_every, hs_ledger;   /* (seconds of the first census
 static int hs_enabled(void) {
     if (hs_first < 0) {
         const char *e = getenv("HOS_HOST_SPLIT");
-        hs_first = e && atoi(e) > 0 ? atoi(e) : 0;
+        const int first = env_int("HOS_HOST_SPLIT", 0);
+        hs_first = first > 0 ? first : 0;
         const char *c = e ? strpbrk(e, ",:") : NULL;   /* (a batch file splits at a comma: HOS_HOST_SPLIT=60:60 there) */
         hs_every = c ? atoi(c + 1) : 0;
-        const char *l = getenv("RX_VK_LEDGER");
-        hs_ledger = l && atoi(l) > 0;
+        hs_ledger = env_int("RX_VK_LEDGER", 0) > 0;
     }
     return hs_first > 0 || hs_ledger;
 }

@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../gpu/vk/compat/hookshot_env.h"   /* (env_on, env_int: the switches' one rule) */
 
 #if defined(_WIN32) && !defined(__EMSCRIPTEN__)
 #define WIN32_LEAN_AND_MEAN
@@ -382,9 +383,9 @@ void hl_mem_init(void) {
         return;
     }
     /* the heaps: not while hos_heapsplit.c measures their coldness itself (HOS_HEAP_SPLIT with HOS_HEAP_SPLIT_COLD) */
-    const char *he = getenv("HL_MEM_COLD_HEAPS"), *hs = getenv("HOS_HEAP_SPLIT"), *hc = getenv("HOS_HEAP_SPLIT_COLD");
+    const char *he = getenv("HL_MEM_COLD_HEAPS");
     const int want_heaps = he && he[0] ? atoi(he) != 0 : HL_MEM_COLD_HEAPS_DEFAULT;
-    const int split_cold = hs && atoi(hs) > 0 && hc && atoi(hc) > 0;
+    const int split_cold = env_int("HOS_HEAP_SPLIT", 0) > 0 && env_int("HOS_HEAP_SPLIT_COLD", 0) > 0;
     config.settle_passes = COLD_SETTLE_PASSES;
     heaps_on = want_heaps && !split_cold && hl_mem_cold_start(HL_MEM_COLD_HEAPS, &config);
     const char *li = getenv("HL_MEM_COLD_LISTED");

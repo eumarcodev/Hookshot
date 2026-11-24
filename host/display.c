@@ -50,8 +50,7 @@ static int cursor_hidden;
 static int mouse_test_rate(void) {
     static int rate = -1;
     if (rate < 0) {
-        const char *e = getenv("HOS_MOUSE_TEST");
-        rate = e ? atoi(e) : 0;
+        rate = env_int("HOS_MOUSE_TEST", 0);
         if (rate < 0) rate = 0;
         if (rate) hos_log("mouse: a test's mouse, captured, %d counts a second to the right (HOS_MOUSE_TEST)", rate);
     }

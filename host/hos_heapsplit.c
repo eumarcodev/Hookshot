@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../gpu/vk/compat/hookshot_env.h"   /* (env_on, env_int: the switches' one rule) */
 
 #if defined(_WIN32) && !defined(__EMSCRIPTEN__)
 #define WIN32_LEAN_AND_MEAN
@@ -457,8 +458,7 @@ static DWORD WINAPI heapsplit_main(void *p) {
     batch = (WsInfo *)calloc(BATCH, sizeof *batch);
     pools = (uint64_t (*)[2])calloc(32768, sizeof *pools);
     if (!query_ws || !heaps || !seen || !batch || !pools) { hos_log("heapsplit: not started (no memory or no K32QueryWorkingSetEx)"); return 0; }
-    const char *ce = getenv("HOS_HEAP_SPLIT_COLD");
-    const int cold = ce ? atoi(ce) : 0;
+    const int cold = env_int("HOS_HEAP_SPLIT_COLD", 0);
     const int64_t t0 = hos_now_ns();
     hos_log("heapsplit: reading the heaps");
     hos_log_flush();
@@ -727,7 +727,7 @@ static DWORD WINAPI heapsplit_main(void *p) {
 }
 
 __attribute__((constructor)) static void heapsplit_init(void) {
-    const char *e = getenv("HOS_HEAP_SPLIT");
-    if (e && atoi(e) > 0) CloseHandle(CreateThread(NULL, 0, heapsplit_main, (void *)(uintptr_t)atoi(e), 0, NULL));
+    const int at = env_int("HOS_HEAP_SPLIT", 0);
+    if (at > 0) CloseHandle(CreateThread(NULL, 0, heapsplit_main, (void *)(uintptr_t)at, 0, NULL));
 }
 #endif

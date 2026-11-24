@@ -23,12 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-/* a switch of the environment (hookshot_env.txt): set and not 0 */
-static int env_on(const char *name) {
-    const char *e = getenv(name);
-    return e && *e && strcmp(e, "0") != 0;
-}
+#include "../gpu/vk/compat/hookshot_env.h"   /* (env_on, env_int: the switches' one rule) */
 
 #define ITEM_CHOICE_VTABLE 0x84c0d430ULL
 #define ROW_PANES 10
@@ -770,8 +765,7 @@ static int cycle_level(void) {   /* 0 off, 1 the arrows, bottles and spells, 2 a
     int rx_option(int id, int otherwise);
     static int forced = -2;
     if (forced == -2) {
-        const char *e = getenv("HOS_CYCLE_ITEMS");
-        forced = e ? atoi(e) : -1;
+        forced = env_int("HOS_CYCLE_ITEMS", -1);
     }
     /* (the row's values, as the menu lists them: 0 Off, 1 Last used, 2 Basic, 3 +Bombs, 4 +Tools) */
     const int v = forced >= 0 ? forced : rx_option(HOS_OPT_CYCLE_ITEMS, 0);   /* (off by default: R and L reach the game at once) */
@@ -1125,8 +1119,7 @@ uint64_t hos_wheel_input(uint64_t buttons, int32_t stick[4]) {
     static int tap_frames, tap_down_n, tap_wait_n;
     static int64_t last_read;
     if (!tap_frames) {
-        const char *e = getenv("HOS_WHEEL_TAP_FRAMES");
-        const int n = e ? atoi(e) : 1;
+        const int n = env_int("HOS_WHEEL_TAP_FRAMES", 1);
         tap_frames = n < 1 ? 1 : n > 8 ? 8 : n;
     }
     const int64_t now = hos_now_ns();
@@ -1153,8 +1146,7 @@ uint64_t hos_wheel_input(uint64_t buttons, int32_t stick[4]) {
             static uint64_t held_btn;
             static int passing;
             if (!hold_ns) {
-                const char *e = getenv("HOS_WHEEL_HOLD_MS");
-                const int ms = e ? atoi(e) : 250;
+                const int ms = env_int("HOS_WHEEL_HOLD_MS", 250);
                 hold_ns = (int64_t)(ms < 50 ? 50 : ms > 2000 ? 2000 : ms) * 1000000LL;
             }
             const uint64_t sh = buttons & HOLD_BUTTONS;

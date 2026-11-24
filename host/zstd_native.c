@@ -20,6 +20,7 @@
 #include "hos.h"
 #include <stdlib.h>
 #include <string.h>
+#include "../gpu/vk/compat/hookshot_env.h"   /* (env_on, env_int: the switches' one rule) */
 
 void f_834ab4a0(Ctx *A64_NOESC c);   /* (lifted) ZSTD_execSequenceEnd(op, oend, &seq, &litPtr, litLimit, prefixStart, virtualStart, dictEnd) */
 
@@ -438,8 +439,7 @@ L801107e4:
 static int zstd_mode(void) {
     static int m = -1;
     if (m < 0) {
-        const char *e = getenv("HOS_ZSTD_NATIVE");
-        m = e ? atoi(e) : 1;
+        m = env_int("HOS_ZSTD_NATIVE", 1);
         hos_log("zstd: the sequence loop (f_801102e0) %s (HOS_ZSTD_NATIVE=%d)",
                 m == 0 ? "lifted" : m == 2 ? "native and lifted, compared on every call" : "native", m);
     }
@@ -519,7 +519,7 @@ static void zstd_timed(Ctx *c, void (*self)(Ctx *), int native) {
 int hos_zstd_seq(Ctx *c, void (*self)(Ctx *)) {
     if (zstd_bypass) return 0;
     static int timed = -1;
-    if (timed < 0) timed = getenv("HOS_ZSTD_TIME") && atoi(getenv("HOS_ZSTD_TIME")) != 0;
+    if (timed < 0) timed = env_on("HOS_ZSTD_TIME");
     const int mode = zstd_mode();
     if (timed && mode != 2) {
         zstd_timed(c, self, mode != 0);

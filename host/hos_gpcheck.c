@@ -16,6 +16,7 @@
 #include "hos_guestpages.h"
 #include <stdlib.h>
 #include <string.h>
+#include "../gpu/vk/compat/hookshot_env.h"   /* (env_on, env_int: the switches' one rule) */
 
 #if defined(_WIN32) && !defined(__EMSCRIPTEN__)
 #define WIN32_LEAN_AND_MEAN
@@ -207,10 +208,11 @@ static DWORD WINAPI check_main(void *arg) {
 }
 
 void hos_gp_check_start(void) {
-    const char *e = getenv("HOS_GUEST_PAGES_TEST"), *mb = getenv("HOS_GUEST_PAGES_TEST_MB");
+    const char *e = getenv("HOS_GUEST_PAGES_TEST");
+    const int mb = env_int("HOS_GUEST_PAGES_TEST_MB", 0);
     const int test = e && e[0] == '1';
     if (test) {
-        saved_cap = (int64_t)(mb && atoi(mb) > 0 ? atoi(mb) : 256) << 20;
+        saved_cap = (int64_t)(mb > 0 ? mb : 256) << 20;
         if (saved_cap > (int64_t)(SLOTS / 2) * (int64_t)GRAN) saved_cap = (int64_t)(SLOTS / 2) * (int64_t)GRAN;
         AddVectoredExceptionHandler(1, sealing_wait);   /* (in front of commit_on_touch) */
         hos_gp_set_owner(owner);

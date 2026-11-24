@@ -54,8 +54,9 @@ static volatile long long jo_moved, jo_pushes;
 
 static int jo_init(void) {
     if (jo_on >= 0) return jo_on;
-    const char *e = getenv("HOS_JOB_ORDER"), *us = getenv("HOS_JOB_ORDER_US");
-    if (us && atoi(us) > 0) jo_long_ns = (int64_t)atoi(us) * 1000;
+    const char *e = getenv("HOS_JOB_ORDER");
+    const int us = env_int("HOS_JOB_ORDER_US", 0);
+    if (us > 0) jo_long_ns = (int64_t)us * 1000;
     jo_log = env_on("HOS_JOB_ORDER_LOG");
     const int on = e && e[0] == '1';
     static volatile long told;

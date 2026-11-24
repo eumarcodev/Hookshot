@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../gpu/vk/compat/hookshot_env.h"   /* (env_on, env_int: the switches' one rule) */
 
 #if defined(_WIN32) && !defined(__EMSCRIPTEN__)
 #define WIN32_LEAN_AND_MEAN
@@ -580,8 +581,7 @@ static void trap_arm(void) {
 
 static DWORD WINAPI trap_main(void *p) {
     const int at = (int)(uintptr_t)p;
-    const char *ev = getenv("HOS_POOL_TRAP_EVERY"), *rp = getenv("HOS_POOL_TRAP_REPORT");
-    const int every = ev ? atoi(ev) : 0, report_at = rp ? atoi(rp) : 105;
+    const int every = env_int("HOS_POOL_TRAP_EVERY", 0), report_at = env_int("HOS_POOL_TRAP_REPORT", 105);
     const int64_t t0 = trap_t0;   /* (the times are from the start: hos_now_ns counts from the PC's) */
     int64_t next_arm = t0 + (int64_t)at * 1000000000ll, next_sum = next_arm + 5000000000ll, next_full = next_arm + 10000000000ll;
     int reported = 0;
@@ -603,10 +603,9 @@ static DWORD WINAPI trap_main(void *p) {
 }
 
 static void trap_init(void) {
-    const char *e = getenv("HOS_POOL_TRAP");
-    const char *nw = getenv("HOS_POOL_TRAP_NEW");
-    const int fresh = nw && atoi(nw) != 0;
-    if (!fresh && !(e && atoi(e) > 0)) return;
+    const int e = env_int("HOS_POOL_TRAP", 0);
+    const int fresh = env_on("HOS_POOL_TRAP_NEW");
+    if (!fresh && !(e > 0)) return;
     const char *fl = getenv("HOS_POOL_TRAP_FLAGS");
     if (!fl || !*fl) fl = "24,64,22";
     for (const char *s = fl; *s && trap_nflags < 15;) {
@@ -629,7 +628,7 @@ static void trap_init(void) {
     trap_mode = fresh ? 2 : 1;
     hos_log("pooltrap: %s, flags %s%s", fresh ? "every page of new pools trapped" : "resident pool pages trapped", fl,
             fresh ? "" : " (HOS_POOL_TRAP)");
-    CloseHandle(CreateThread(NULL, 0, trap_main, (void *)(uintptr_t)(e ? atoi(e) : 0), 0, NULL));
+    CloseHandle(CreateThread(NULL, 0, trap_main, (void *)(uintptr_t)(e > 0 ? e : 0), 0, NULL));
 }
 
 /* ---- (Hookshot, 2026-11-13) pools the game made without CPU access keep no zero pages in RAM. HOS_NOACCESS_RAM=0: off.
@@ -769,8 +768,8 @@ static DWORD WINAPI discard_main(void *unused) {
 }
 
 void hos_memsplit_init(void) {
-    const char *e = getenv("HOS_MEM_SPLIT");
-    if (e && atoi(e) > 0) CloseHandle(CreateThread(NULL, 0, split_main, (void *)(uintptr_t)atoi(e), 0, NULL));
+    const int at = env_int("HOS_MEM_SPLIT", 0);
+    if (at > 0) CloseHandle(CreateThread(NULL, 0, split_main, (void *)(uintptr_t)at, 0, NULL));
     trap_init();
     if (discard_on()) {
         hos_log("mem: zero pages of pools without CPU access given back every 5 s (HOS_NOACCESS_RAM=0: not)");

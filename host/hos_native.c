@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../gpu/vk/compat/hookshot_env.h"   /* (env_on, env_int: the switches' one rule) */
 
 enum { NR_STRCMP_805AFC70, NR_COUNT };
 
@@ -33,8 +34,8 @@ static int nr_every = 64;
 static volatile long long nr_calls[NR_COUNT], nr_checks[NR_COUNT], nr_diffs[NR_COUNT];
 
 __attribute__((constructor)) static void nr_init(void) {
-    const char *e = getenv("HOS_NR_DIFF_EVERY");
-    if (e && atoi(e) > 0) nr_every = atoi(e);
+    const int every = env_int("HOS_NR_DIFF_EVERY", 0);
+    if (every > 0) nr_every = every;
     for (int i = 0; i < NR_COUNT; i++) {
         const char *v = getenv(nr_info[i].env);
         int m = nr_info[i].default_mode;

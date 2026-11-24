@@ -19,6 +19,7 @@
 #include <windows.h>   /* (GetTickCount64: loop_watch) */
 #include <stdlib.h>
 #include <string.h>
+#include "../gpu/vk/compat/hookshot_env.h"   /* (env_on, env_int: the switches' one rule) */
 
 static inline uint64_t ld64(uint64_t a) { uint64_t v; memcpy(&v, GP(a), 8); return v; }
 static inline uint32_t ld32(uint64_t a) { uint32_t v; memcpy(&v, GP(a), 4); return v; }
@@ -150,8 +151,7 @@ volatile int hos_names_checking = 0;   /* (HOS_NAMES_NATIVE=2: the exits' splice
 static int names_mode(void) {
     static int m = -1;
     if (m < 0) {
-        const char *e = getenv("HOS_NAMES_NATIVE");
-        m = e ? atoi(e) : 1;
+        m = env_int("HOS_NAMES_NATIVE", 1);
         hos_names_checking = m == 2;
         hos_log("names: the name searches of f_805aeea0 %s (HOS_NAMES_NATIVE=%d)",
                 m == 0 ? "lifted" : m == 2 ? "lifted, each iteration checked against the native one" : "native", m);

@@ -92,8 +92,7 @@ static void no_power_throttling(void) {
    render thread pinned to one core */
 #ifdef _WIN32
 static void process_priority(void) {
-    const char *e = getenv("HOS_PROCESS_PRIORITY");
-    const int level = e ? atoi(e) : 1;   /* (above normal by default since hs206-hs209, the same route alternated: frames >= 40 ms
+    const int level = env_int("HOS_PROCESS_PRIORITY", 1);   /* (above normal by default since hs206-hs209, the same route alternated: frames >= 40 ms
                                              6 and 7 against 17 and 10, gaps >= 28 ms 23 and 21 against 34 and 27, the terrace's
                                              repeats 0.51 and 0.36 a second against 0.65 and 0.55) */
     const DWORD cls = level >= 2 ? HIGH_PRIORITY_CLASS : level == 1 ? ABOVE_NORMAL_PRIORITY_CLASS : NORMAL_PRIORITY_CLASS;
