@@ -657,8 +657,8 @@ def logic_checks(exe, menu, tmp, form):
               "Hookshot closed unexpectedly during the start. An unexpected error.").strip()
     assert url.startswith(form + "&") and len(url) <= 2000, url
     q = parse_qs(urlsplit(url).query)
-    assert q["template"] == [".github/ISSUE_TEMPLATE/1-game-problem.yml"]
-    assert (ROOT / q["template"][0]).is_file()
+    assert q["template"] == ["1-game-problem.yml"]   # (GitHub names a template by its file name)
+    assert (ROOT / ".github" / "ISSUE_TEMPLATE" / q["template"][0]).is_file()
     assert q["field:version"] == ["v3.1.0 (source 1234abcd)"] and q["field:gpu"] == ["NVIDIA GeForce RTX 3090, NVIDIA 580.95.05"]
     assert q["title"] == ["Game: Hookshot closed unexpectedly during the start"] and "field:what" in q and "field:system" in q
     long_url = run(exe, "url", "T", "v1", "G", "S", "w" * 3000).strip()
