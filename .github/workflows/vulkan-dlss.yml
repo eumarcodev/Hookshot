@@ -9,7 +9,7 @@ name: Vulkan back end with NVIDIA DLSS
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, develop]
     paths:
       - 'gpu/vk/vk_dlss*'
       - 'gpu/vk/vk_temporal*'

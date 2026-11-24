@@ -148,7 +148,7 @@ class Workflow(unittest.TestCase):
                          "tests/run_vulkan_fixtures.py", "--device llvmpipe"):
             self.assertIn(required, job)
         triggers = workflow.split("\npermissions:", 1)[0]
-        self.assertIn("pull_request:\n    branches: [main]", triggers)
+        self.assertIn("pull_request:\n    branches: [main, develop]", triggers)
         self.assertNotIn("paths:", triggers)
 
 
