@@ -68,10 +68,23 @@ def main():
     create = create[create.index("\n") + 1:]   # (from the line after: the image's initialization, to its Texture*)
     if "// into GENERAL, and cleared" not in create or "Texture* p = tex.get();" not in create:
         raise SystemExit("create()'s initialization moved: update this test")
-    jobs = cut(replay, "    struct Job {", "    seg_ms += std::chrono::duration")
+    # (replay_handle's jobs: the one after memory_rb_segments_begin(base, seg.size()). The early-GPU path above it has a Job
+    # of its own, with the same init calls; the fixture runs the one the test was written for, and the other is kept to them)
+    handle_at = replay.index("memory_rb_segments_begin(base, seg.size());")
+    early_at = replay.index("memory_rb_segments_begin(base, (uint64_t)nplan);")
+    if replay.count("memory_rb_segments_begin(") != 2 or early_at > handle_at:
+        raise SystemExit("the two parallel blocks moved: update this test")
+    jobs = cut(replay[handle_at:], "    struct Job {", "    seg_ms += std::chrono::duration")
+    early_jobs = cut(replay[early_at:handle_at], "    struct Job {", "    seg_ms += std::chrono::duration")
+    for step in ("texture_segments_begin(inits.data(), inits.size());", "texture_set_segment(j->order);",
+                 "texture_segment_worker(j->index);", "texture_begin_recording(j->r->upload, j->r->value);",
+                 "record_segment(c, j->g);", "j->uploads = texture_uploads_recorded();", "j->inits = texture_segment_end(j->index);",
+                 "texture_segment_worker(-1);"):
+        if step not in early_jobs:
+            raise SystemExit("the early-GPU parallel block no longer has: " + step)
     have_seg_init = "std::mutex seg_init_mu;" in texture
     exits = {"init_end_fail": 3} if have_seg_init else {}   # (replay_fatal ends the process)
-    for step in ("record_segment(c, j->g);", "texture_begin_recording(j->r->upload, j->r->value);", "vkQueueSubmit2(",
+    for step in ("record_segment(c, j->g);", "texture_begin_recording(j->r->upload, j->r->value);", "submit_or_retry(si, j->r->fence)",
                  "j->uploads = texture_uploads_recorded();", "par_pool.cv.notify_all();"):
         if step not in jobs:
             raise SystemExit("the parallel block no longer has: " + step)
@@ -87,7 +100,13 @@ def main():
         if call not in start or start.index(call) < start.index("for (Frame& f : frames)") or                 "return false" in start[start.index(call) + len(call):]:
             raise SystemExit("FAIL: replay_start does not make the init pools last (a later failure would leave them made)")
     inc = {
-        "init_upload.inc": cut(texture, "// ---- the recording's upload command buffer ----", "// ---- staging:"),
+        # (the recording's upload command buffer state without the ASTC trace's counters, which need a Texture; and the
+        # redirect to the earliest open segment, up to the anonymous namespace's end, where the hooks for the pool mirror
+        # follow outside it: the fixture has no anonymous namespace)
+        "init_upload.inc": "\n".join((
+            cut(texture, "thread_local VkCommandBuffer up_cmd = VK_NULL_HANDLE;", "int64_t st_uploads"),
+            cut(texture, "thread_local std::atomic<bool>* up_watch = nullptr;", "}  // namespace\n// (RX_VK_POOL_MIRROR"),
+            cut(texture, "void* upload_to_earliest_begin()", "namespace {\n\n// ---- staging:"))),
         "init_create.inc": create,
         "init_scratch.inc": block(texture, "bool bc_scratch_layout("),
         "init_hooks.inc": "\n".join(hooks),

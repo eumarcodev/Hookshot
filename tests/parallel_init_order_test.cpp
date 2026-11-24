@@ -268,6 +268,11 @@ void queue_flush_locked() {}
 void checkpoints_report() {}
 const void* reflex_submit_id(const void* next, uint64_t = ~0ull) { return next; }   // (vk_reflex.cpp: no tag without Reflex)
 bool memory_sparse_wait(VkSemaphoreSubmitInfo*) { return false; }   // (vk_memory.cpp: no sparse mirror binds here)
+// (vk_replay.cpp: the submit, made again while the driver refuses it for want of memory; the spy never refuses)
+VkResult submit_or_retry(const VkSubmitInfo2& si, VkFence fence) { return vkQueueSubmit2(VK_NULL_HANDLE, 1, &si, fence); }
+void host_read_barrier(VkCommandBuffer) {}   // (vk_replay.cpp: a memory barrier only: no image's layout in it)
+namespace fps_stats { constexpr int kRtWorkers = 0; }
+struct FpsRtWait { explicit FpsRtWait(int) {} };   // (vk_fps.h: the FPS counter's render lane)
 [[noreturn]] void device_lost() { std::_Exit(3); }   // (vk_replay.cpp: the report, then the process ends)
 struct {
     VkDevice device = VK_NULL_HANDLE;
