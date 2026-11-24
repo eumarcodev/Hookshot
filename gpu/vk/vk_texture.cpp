@@ -901,8 +901,11 @@ void texture_staging_prewarm(int n) {
 
 namespace {
 // ---- the GPU ASTC decoder (Eden's) ----
+/// (field for field astc_decoder.comp's push block: a word the shader reads past what is pushed is undefined, and AMD's
+/// Windows driver stopped every invocation at its blocks_x, every GPU-decoded texture left black; test_astc_push_layout.py)
 struct AstcPush {
     uint32_t block_dims[2], layer_stride, block_size, x_shift, block_height, block_height_mask, native_tiling;
+    uint32_t blocks_x, blocks_y;  // the level's size in blocks: a dispatch over a larger scratch stops there
 };
 VkDescriptorSetLayout astc_set = VK_NULL_HANDLE;
 VkPipelineLayout astc_layout = VK_NULL_HANDLE;
@@ -1860,6 +1863,7 @@ bool upload_astc_gpu(Texture& tex, uint64_t total, const Ranges* dirty) {
             pc.block_height = g.tile_h;
             pc.block_height_mask = (1u << g.tile_h) - 1;
             pc.native_tiling = 1;
+            pc.blocks_x = g.tw, pc.blocks_y = g.th;
             for (size_t k0 = 0; k0 < layers.size();) {
                 size_t k1 = k0 + 1;
                 // (one layer a run: with runs of up to kBcLayers, an array's layers past the run's first came out wrong in the
@@ -1904,6 +1908,7 @@ bool upload_astc_gpu(Texture& tex, uint64_t total, const Ranges* dirty) {
         pc.block_height = g.tile_h;
         pc.block_height_mask = (1u << g.tile_h) - 1;
         pc.native_tiling = 1;
+        pc.blocks_x = g.tw, pc.blocks_y = g.th;
         for (size_t k = 0; k < (all ? 1 : layers.size()); k++) {
             const VkImageView view = astc_level_view(&tex, level, all ? ~0u : layers[k]);
             if (!view) {
@@ -1946,6 +1951,7 @@ std::vector<AstcPiece> astc_pieces(const Texture& tex, const std::vector<uint32_
         pc.block_height = g.tile_h;
         pc.block_height_mask = (1u << g.tile_h) - 1;
         pc.native_tiling = 1;
+        pc.blocks_x = g.tw, pc.blocks_y = g.th;
         pc0.gx = (g.tw + 7) / 8, pc0.gy = (g.th + 7) / 8;
         for (size_t k = 0; k < layers.size(); k++) {
             AstcPiece p = pc0;
