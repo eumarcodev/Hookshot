@@ -304,6 +304,7 @@ struct { bool eds3_blend = false, eds3_polygon = false, eds3_clamp = false, eds3
 @TARGET_WRITE_MASK@
 @VERTEX_INFO@
 @KEY_INPUTS@
+@PIPELINE_KEY_FROM@
 @PIPELINE_KEY@
 static Stage vertex_stage(uint32_t loads) { Stage s; s.info.loads.mask = loads; return s; }
 static Stage mesh_stage() { Stage s; s.vk_stage = VK_SHADER_STAGE_MESH_BIT_EXT; return s; }
@@ -365,8 +366,15 @@ def main():
     for fn in ("uint64_t mix(uint64_t h, uint64_t v) {", "uint64_t pipeline_key(const KeyInputs& k) {"):
         if fn in draw or key_h.count(fn) != 1:
             raise SystemExit("draw_key.h is not the one place that defines " + fn)
+    # (the wrapper seeds draw_key.h's arithmetic with the program's key and variant, as draw_key.h's pipeline_key does, through
+    # pipeline_key_from, which the ledger also calls with its own seed; the one mix( is that seed)
     wrapper = block(draw, "uint64_t pipeline_key(const Program& p, const NvnState& s, const Targets& at, VkPrimitiveTopology topo) {")
-    if "return pipeline_key(key_inputs(p, s, at, topo));" not in wrapper or "mix(" in wrapper:
+    from_seed = block(draw, "static uint64_t pipeline_key_from(uint64_t seed, const Program& p, const NvnState& s, const Targets& at, "
+                            "VkPrimitiveTopology topo) {")
+    if ("return pipeline_key_from(mix(p.key, p.variant), p, s, at, topo);" not in wrapper or wrapper.count("mix(") != 1
+            or "return pipeline_key_seeded(key_inputs(p, s, at, topo), seed);" not in from_seed or "mix(" in from_seed
+            or "inline uint64_t pipeline_key(const KeyInputs& k) { return pipeline_key_seeded(k, mix(k.prog, k.variant)); }"
+            not in key_h or "k.prog = p.key, k.variant = p.variant;" not in block(draw, "KeyInputs key_inputs(")):
         raise SystemExit("vk_draw.cpp's pipeline_key does not make its key with draw_key.h's")
     reads = block(draw, "KeyInputs key_inputs(")
     if "mix(" in reads:
@@ -382,7 +390,7 @@ def main():
                    .replace("@TARGETS@", block(draw, "struct Targets {"))
                    .replace("@TARGET_WRITE_MASK@", block(draw, "uint32_t target_write_mask(const Program& p, const NvnState& s, int i) {"))
                    .replace("@VERTEX_INFO@", block(draw, "const Shader::Info* vertex_info(const Program& p) {"))
-                   .replace("@KEY_INPUTS@", reads).replace("@PIPELINE_KEY@", wrapper)
+                   .replace("@KEY_INPUTS@", reads).replace("@PIPELINE_KEY_FROM@", from_seed).replace("@PIPELINE_KEY@", wrapper)
                    .replace("@KEYS@", "\n".join(draw_code(c, pipeline_key(c)) for c in cases)))
     with tempfile.TemporaryDirectory(prefix="pipeline-key-") as tmp:
         for name, text in (("alone", alone), ("draw", from_a_draw)):
