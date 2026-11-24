@@ -6,7 +6,9 @@ Put the release's `HookshotBuilder.exe` setup in a writable folder on your SSD, 
 .\HookshotBuilder.exe --portable
 ```
 
-The setup creates a marked `HookshotBuilder` data folder beside itself. Keep this folder: it contains the installed
+The setup creates a marked `HookshotBuilder-data` data folder beside itself (not `HookshotBuilder`: that is the folder of
+the Builder the zip carries, which the setup copies from, and a home of that name would be copied into itself; a setup
+that finds a portable marker there stops, and the zip has to be unpacked into a new folder). Keep this folder: it contains the installed
 Builder, downloaded update parts, settings, SDK downloads you opt into, and the default build files. The normal setup
 continues to use `%LOCALAPPDATA%\HookshotBuilder`; portable mode does not import that installation or its settings.
 To reuse existing game files, select them explicitly in the new Builder.
