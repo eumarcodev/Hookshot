@@ -2447,7 +2447,7 @@ void device_lost_notice() {
     std::thread([name = std::string(dev.props.deviceName)] {
         const std::string text = "The graphics card (" + name + ") stopped responding to Hookshot (Vulkan: device lost), so the "
             "picture will stay black. The game cannot recover from this: close it and start it again.\n\nIf it happens again at "
-            "the same place, please open an issue at git.notrexed.dev/Hookshot/Hookshot and attach hookshot_log.txt from the game folder.";
+            "the same place, please open an issue at github.com/eumarcodev/Hookshot and attach hookshot_log.txt from the game folder.";
         MessageBoxA(nullptr, text.c_str(), "Hookshot: graphics card stopped", MB_OK | MB_ICONERROR | MB_TOPMOST);
     }).detach();
 #endif

@@ -24,8 +24,8 @@
 #define HOS_CRASH_SHOW_ARG "--crash-show"
 /* (the game-problem form, as the Insert menu's Bug report links it: gpu/vk/vk_bug_report.cpp kForm. Forgejo fills a form's field
    from the query's field:<its id>, and the title from title=) */
-#define HOS_CRASH_ISSUE_FORM "https://git.notrexed.dev/Hookshot/Hookshot/issues/new?template=.github/ISSUE_TEMPLATE/1-game-problem.yml"
-#define HOS_CRASH_ISSUES "https://git.notrexed.dev/Hookshot/Hookshot/issues/new/choose"
+#define HOS_CRASH_ISSUE_FORM "https://github.com/eumarcodev/Hookshot/issues/new?template=1-game-problem.yml"
+#define HOS_CRASH_ISSUES "https://github.com/eumarcodev/Hookshot/issues/new/choose"
 enum { HOS_CRASH_LINK_MAX = 2000, HOS_CRASH_LOG_LINES = 200 };
 
 /* ---- the helper's command line ---- */

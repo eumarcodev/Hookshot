@@ -3491,7 +3491,7 @@ uint64_t memory_in_place_writer_part(uint64_t guest, uint64_t size, uint64_t who
     // this one: the recordings' timeline is in order. A mirror's pages: the caller's part)
     // (a write over 1 MiB is noted in early_pages but not in wb_pages (note_direct_write): its page's early entry counts even where
     // wb_pages names an older submission, or a later part of the same submission is missed. zeldaootr's review of
-    // https://git.notrexed.dev/Hookshot/Hookshot/pulls/303, finding 1)
+    // pull request 303 of the old forge, finding 1)
     for (uint64_t pg = guest >> kPageShift; pg <= (guest + size - 1) >> kPageShift; pg++) {
         const auto it = early_pages.find(pg);
         if (it != early_pages.end() && it->second.value == whole) { part = std::max(part, it->second.part); continue; }
@@ -6228,7 +6228,7 @@ void memory_note_gpu_write(uint64_t gpu, uint64_t size) {
     rb_hazard_locked(guest, guest + size);
     // and RX_VK_READBACK_EARLY's writers: a bare storage pointer's guessed range or a wide binding is written in
     // place where pools have no mirror, and no page record held it, so a read let go at an earlier writer's part could come
-    // back before it (zeldaootr's review of https://git.notrexed.dev/Hookshot/Hookshot/pulls/303, finding 4: on the Steam
+    // back before it (zeldaootr's review of pull request 303 of the old forge, finding 4: on the Steam
     // Deck, Kokiri Forest to the Market, Kakariko and Hyrule Field, 3 of 637 waits for the 0x3980 camera block had 4-21 bytes
     // changed after their writer's part). Only ranges a read waited for are kept (early_in_place_write)
     ec_kind = 2;

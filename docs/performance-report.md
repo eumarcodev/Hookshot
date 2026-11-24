@@ -33,7 +33,7 @@ File name extensions**.
 
 ## 3. Send it
 
-Send the team, on [Discord](https://discord.gg/rexed) or with a [report](https://git.notrexed.dev/Hookshot/Hookshot/issues/new):
+Send the team, on [Discord](https://discord.gg/rexed) or with a [report](https://github.com/eumarcodev/Hookshot/issues/new):
 
 - the **bug report folder** from step 3, and `hookshot_log.txt` from the game folder's `logs` folder;
 - the **profile folder** from that run (the newest `profile-...` folder in `logs`), zipped: it shrinks a lot. Say about

@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
     write(31 * P, 31 * P + 64, 16, 17, kDispatch);   // (page 31: in no range)
     check(memory_in_place_writer_part(30 * P, 2 * P, 16) == 0, "a range reaching past it into a page written unseen: the whole submission");
     // (a write over 1 MiB later in the same submission: noted in early_pages but not in wb_pages, note_direct_write. zeldaootr's
-    // and mooki's reviews of https://git.notrexed.dev/Hookshot/Hookshot/pulls/303)
+    // and mooki's reviews of pull request 303 of the old forge)
     memory_rb_waited(400 * P, 4 * P);
     write(400 * P, 400 * P + 64, 50, 20, kDispatch);
     write(401 * P, 401 * P + 300 * P, 50, 30, kDispatch);

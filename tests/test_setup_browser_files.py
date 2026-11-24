@@ -1,5 +1,5 @@
 """The setup takes files the player downloaded with a browser (builder/setup/setup.c browser_file), for players whose setup
-could not reach git.notrexed.dev while a browser could (2026-11-15: "not able to connect, even with WARP or a VPN"). Checked by
+could not reach the old forge while a browser could (2026-11-15: "not able to connect, even with WARP or a VPN"). Checked by
 source here (an end-to-end run, the list's and a part's links unreachable, installed v2.3.1 from the saved files on
 2026-11-15):
 

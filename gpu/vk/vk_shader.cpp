@@ -641,7 +641,7 @@ private:
 /// own (OoT's clustered lights: each light's shadow map, read per pixel from the light table) becomes an array of the
 /// table's first entries, which the shader indexes per pixel. Without them those samples took a constant word on their
 /// path for the handle (the light table's address), bound no texture, and the lights' shadow tests read nothing: dark
-/// and green blocks on Zora's Domain's ice and snow (https://git.notrexed.dev/Hookshot/Hookshot/issues/52,
+/// and green blocks on Zora's Domain's ice and snow (issue 52 of the old forge,
 /// https://github.com/NotRexed/Hookshot/issues/2509). Needs nonuniform sampled image array indexing (Vulkan 1.2's descriptor
 /// indexing) and room for the arrays in the descriptor limits. RX_VK_HANDLE_TABLES=0: off, the translation as without them
 /// (a test; in the cache's stamp). The log line names the check that turned them off

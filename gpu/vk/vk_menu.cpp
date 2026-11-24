@@ -71,7 +71,7 @@
 #ifndef HOOKSHOT_ENV_H   // (env_on: the switches' one rule)
 #include "hookshot_env.h"
 #endif
-#include "pipeline_share.h"   // (Save my pipeline list: the zip for issue 14)
+#include "pipeline_share.h"   // (Save my pipeline list: the zip for the issues page)
 #ifndef _WIN32   // (Save my pipeline list: the desktop's programs. On Windows, shell32 and ole32 are loaded when it is used)
 #include <fcntl.h>
 #include <spawn.h>
@@ -3151,7 +3151,7 @@ namespace ps = pipeline_share;
 std::string share_said;    // (the help box's line after a save: where the zip went and what to do, or why there is none)
 std::string share_value;   // (the row's value after a save: Saved, or Not saved)
 constexpr const char* kShareSaidLongest = "Saved hookshot-pipelines-2026-12-31.zip (123456 pipelines) in Downloads. The report "
-    "is in the zip. Open git.notrexed.dev/Hookshot/Hookshot/issues/14 and attach the zip to a comment, then paste the report and say "
+    "is in the zip. Open github.com/eumarcodev/Hookshot/issues and attach the zip to a comment, then paste the report and say "
     "where you played.";   // (measure_help: the help box's room)
 std::string share_saved;   // (the first sentence: the zip's name, its pipelines and its folder)
 std::atomic<bool> share_busy{false};   // (the worker is copying and opening: presses wait for it)
@@ -3172,7 +3172,7 @@ std::string share_saved_line(const std::string& name, long long n, const std::st
 /// The rest of it, once the worker has answered (share_result: 1 copied, 2 the issue opened)
 std::string share_done_line(int r) {
     return std::string(i18n::tr((r & 1) ? "The report is copied. " : "The report is in the zip. ")) +
-           i18n::tr((r & 2) ? "Issue 14 is open in your browser: attach" : "Open git.notrexed.dev/Hookshot/Hookshot/issues/14 and attach") +
+           i18n::tr((r & 2) ? "The issues page is open in your browser: attach" : "Open github.com/eumarcodev/Hookshot/issues and attach") +
            i18n::tr(" the zip to a comment, then paste the report and say where you played.");
 }
 /// The help box's line when the zip could not be written in that folder (share_folder_name)
@@ -4497,7 +4497,7 @@ const char* bug_report_cell() {
 /// Under its help once saved: where the report is and what to do with it (the game opens nothing: no browser or file manager is
 /// sure to be there, as on a Steam Deck in Game Mode)
 std::string bug_report_saved_text(const std::string& folder) {
-    return "Saved in the game folder as " + folder + ". To send it, open git.notrexed.dev/Hookshot/Hookshot/issues, choose New issue and "
+    return "Saved in the game folder as " + folder + ". To send it, open github.com/eumarcodev/Hookshot/issues, choose New issue and "
            "Game problem, copy report.txt's answers into the form and drag the folder's files into it: on Windows from File "
            "Explorer, on Linux from a file manager (on a Steam Deck, in Desktop Mode).";
 }

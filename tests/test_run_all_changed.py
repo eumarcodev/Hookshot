@@ -59,9 +59,9 @@ class ChangedTests(unittest.TestCase):
 
     def test_the_base_is_main_on_the_remote_that_points_at_hookshot(self):
         # (forge.py adds forge for it unless a remote points there already; a GitHub-era clone's origin is GitHub)
-        cases = (("forge\thttps://git.notrexed.dev/Hookshot/Hookshot.git (fetch)\n"
+        cases = (("forge\thttps://github.com/eumarcodev/Hookshot.git (fetch)\n"
                   "origin\thttps://github.com/NotRexed/Hookshot.git (fetch)\n", "forge/main"),
-                 ("hookshot\thttps://git.notrexed.dev/Hookshot/Hookshot.git (fetch)\n"
+                 ("hookshot\thttps://github.com/eumarcodev/Hookshot.git (fetch)\n"
                   "forge-fork\thttps://git.example.org/someone/Hookshot.git (fetch)\n", "hookshot/main"),
                  ("origin\thttps://git.example.org/someone/Hookshot.git (fetch)\n", "origin/main"))
         for out, want in cases:

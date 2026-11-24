@@ -62,7 +62,7 @@ inline bool old_ini_choice(const char* line, int* value) {
 /// Hyrule Castle's entrance, while the fallback played 25 minutes there with none. Navi 23: an RX 6600 (driver 0x800161)
 /// lost the device on the session's first task + mesh draws (reported in Mako by sharkiix, no log published); another RX 6600
 /// on the same driver played 15-20 minutes on the native path and lost the device only at the driver's VRAM limit
-/// (https://git.notrexed.dev/Hookshot/Hookshot/issues/130); the fallback costs VRAM of its own (fallback_buffers_of,
+/// (issue 130 of the old forge); the fallback costs VRAM of its own (fallback_buffers_of,
 /// vk_draw.cpp). Navi 24 (0x743f: RX 6400, 6500 XT; 0x7421 to 0x7424: RX 6300, Pro W6300 to W6500M) is not on by default: no
 /// report, 4 GB cards. RX_VK_TASK_MESH_FALLBACK=1 to try.
 /// Which IDs a chip brings: all its IDs that the PCI ID database (pci-ids.ucw.cz) or libdrm's amdgpu.ids name a card for,

@@ -323,7 +323,7 @@ def share_pipeline_list(folder, out_dir=None, copy=None, open_path=None):
             opened = False
     return ("Saved %s (%d pipelines) in %s. %s%s the zip to a comment, then paste the report and say where you played." %
             (os.path.basename(path), n, os.path.dirname(path), "The report is copied. " if copied else "The report is in the zip. ",
-             "Issue #%d is open in your browser: attach" % pipeline_share.ISSUE if opened else
+             "The issues page is open in your browser: attach" if opened else
              "Open %s and attach" % pipeline_share.ISSUE_URL))
 
 

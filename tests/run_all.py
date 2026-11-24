@@ -456,7 +456,7 @@ class Result:
 # (--changed, the dev-loop proposal's D1) the checks that read what changed: most tests name the files they cut code from or run,
 # by path or by name, so a test whose text names a changed file is picked. A change to this runner, or to a shared .py of tests/
 # that is not a test, picks every check. Before a pull request the whole run is still the one that counts (docs/workflow.md)
-HOOKSHOT_REMOTE = "git.notrexed.dev/hookshot/hookshot"   # (Hookshot's own forge: a remote that points at it, whatever its name)
+HOOKSHOT_REMOTE = "github.com/eumarcodev/hookshot"   # (Hookshot's own repository: a remote that points at it, whatever its name)
 
 
 def default_base():

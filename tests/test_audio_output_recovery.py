@@ -3,7 +3,7 @@
 python -I -B tests/test_audio_output_recovery.py [--cc gcc] [--source host/nn_audio.c] [--case upmix]
 The unchanged output section is compiled with authored device spies shared with audio_output_errors_test.c.
 Historical main aa95d35f fails upmix/downmix/retry; current main includes PR 448 and should pass these guards too.
-No game, device, microphone or dump is opened. PR 448: https://git.notrexed.dev/Hookshot/Hookshot/pulls/448
+No game, device, microphone or dump is opened. PR 448: pull request 448 of the old forge
 """
 import argparse
 import hashlib

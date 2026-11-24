@@ -257,7 +257,7 @@ def wiring():
     check(not re.search(r'"&(?!field:)[a-z]+="', report), "the link has a part Forgejo does not fill a field from")
     for field in filled:
         check("id: " + field + "\n" in form, "the issue form has no field id " + field)
-    check('kForm = "https://git.notrexed.dev/Hookshot/Hookshot/issues/new?template=.github/ISSUE_TEMPLATE/1-game-problem.yml"'
+    check('kForm = "https://github.com/eumarcodev/Hookshot/issues/new?template=1-game-problem.yml"'
           in report, "the link does not open the game problem form")
 
 
@@ -338,7 +338,7 @@ def main():
         logs = section("hookshot_log.txt")
         check("hookshot v2.0.14" in logs and "CRASH: exception 0xc0000005" in logs, "the logs' section: " + logs)
         check("picture.png" in section("Screenshots or video"), "the picture is not named")
-        link = report[report.index("https://git.notrexed.dev/Hookshot/Hookshot/issues/new?template=.github/ISSUE_TEMPLATE/1-game-problem.yml"):].split()[0]
+        link = report[report.index("https://github.com/eumarcodev/Hookshot/issues/new?template=1-game-problem.yml"):].split()[0]
         for part in ("&field:version=v2.1.0-rc.3-39-gbdfe09c%20%28source%20763271ad%29", "&field:gpu=NVIDIA%20GeForce%20RTX%204090",
                      "&field:where=HyruleField_Child%20%28child%29", "&field:system=", "&field:settings=Upscaler", "HOS_HEADLESS", "RX_VK_MENU_SCRIPT"):
             check(part in link, "the link does not fill in " + part)
@@ -396,7 +396,7 @@ def main():
         # switches there are; report.txt lists them all
         folders, out = run(exe, "many", game, str(now_log), home, user, windows)
         report = (game_path / folders[0] / "report.txt").read_text(encoding="utf-8")
-        link = report[report.index("https://git.notrexed.dev/Hookshot/Hookshot/issues/new?template=.github/ISSUE_TEMPLATE/1-game-problem.yml"):].split()[0]
+        link = report[report.index("https://github.com/eumarcodev/Hookshot/issues/new?template=1-game-problem.yml"):].split()[0]
         check(len(link) <= 2000, "the link with 98 switches: %d characters" % len(link))
         settings = hw.section(report, "Changes from the defaults")
         listed = [ln for ln in settings.splitlines() if re.match(r"[A-Z_][A-Z0-9_]*=", ln)]
@@ -463,7 +463,7 @@ def main():
             else:
                 check("Monitor's shape (default depends on this PC)" in context and
                       "NVIDIA DLSS (default depends on this PC)" in context, "PC values/default uncertainty lost")
-            link = next(line for line in report.splitlines() if line.startswith("https://git.notrexed.dev/Hookshot/Hookshot/issues/new?"))
+            link = next(line for line in report.splitlines() if line.startswith("https://github.com/eumarcodev/Hookshot/issues/new?"))
             check(len(link) <= 2000, "the link: %d characters" % len(link))
             settings = parse_qs(urlsplit(link).query)["field:settings"][0]
             if mode == "context":

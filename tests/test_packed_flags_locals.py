@@ -3,7 +3,7 @@
 A64_PACKED_FLAGS=1 makes the kit's pack_flags fold a flag-setting instruction's four stores (c->n=...; c->z=...;
 c->c=...; c->v=...;) into one a64_set_nzcv(c, ...). That call writes the context where localize_regs' FLAG_REF does not
 see it: with the flags as locals (on by default since
-https://git.notrexed.dev/Hookshot/Hookshot/pulls/1576) a CMP's result went to the context and the following B.EQ
+pull request 1576 of the old forge) a CMP's result went to the context and the following B.EQ
 read the local Z from before it. So local_flags() answers no while A64_PACKED_FLAGS is set, as the kit reads it.
 
 Checked here, without the game:

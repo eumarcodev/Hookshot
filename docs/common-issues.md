@@ -103,6 +103,6 @@ SDR: ..."), and `hookshot_log.txt` has the same in its `vk: HDR:` line.
    the driver doesn't offer HDR to Vulkan games. Updating the driver may not be enough: reinstall it with a clean
    install (NVIDIA: run the driver's installer from nvidia.com, choose **Custom**, tick **Perform a clean
    installation**), then restart the PC. A clean install resets the driver's settings, such as the output colour
-   depth. If the line stays, [report it](https://git.notrexed.dev/Hookshot/Hookshot/issues/new/choose) with your graphics card, your display and `hookshot_log.txt`.
+   depth. If the line stays, [report it](https://github.com/eumarcodev/Hookshot/issues/new/choose) with your graphics card, your display and `hookshot_log.txt`.
 3. **Update the graphics driver** if neither fits.
 

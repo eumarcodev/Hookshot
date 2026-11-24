@@ -12,6 +12,6 @@ Supported shared engines are DLSS/DLAA, FSR4/native AA and FSR3.1. The legacy `R
 
 ## Validation
 
-Compare compatibility on/off in the same scene, retain normal format/camera/depth rejection, and check cold launch, saved settings, scale, tone, HDR and frame-generation transitions. Record the tested commit, GPU/driver and OS. The remaining Lake Hylia/Field transfer report is tracked in [issue344](https://git.notrexed.dev/Hookshot/Hookshot/issues/344); the merged scene-permutation fix addresses the confirmed ranch cause, not every possible transition fallback. See [format/history and FG rules](temporal-history.md) for the backend details.
+Compare compatibility on/off in the same scene, retain normal format/camera/depth rejection, and check cold launch, saved settings, scale, tone, HDR and frame-generation transitions. Record the tested commit, GPU/driver and OS. The remaining Lake Hylia/Field transfer report is tracked in issue344; the merged scene-permutation fix addresses the confirmed ranch cause, not every possible transition fallback. See [format/history and FG rules](temporal-history.md) for the backend details.
 
 The tone-mapper control appears only with Native HDR. Set HDR Native before editing that row; skip it while HDR is Off or Expanded. Hiding that inapplicable control is independent of the upscaler. In the menu, select DLSS and then Native render resolution for DLAA. An older control bridge cannot select that state through a numeric Upscaler step; a cold launch with the saved DLAA choice can test it without changing the menu's behavior.

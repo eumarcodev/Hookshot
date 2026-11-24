@@ -15,7 +15,7 @@
 
 namespace mkwvk::pipeline_share {
 
-constexpr const char* kIssueUrl = "https://git.notrexed.dev/Hookshot/Hookshot/issues/14";
+constexpr const char* kIssueUrl = "https://github.com/eumarcodev/Hookshot/issues";
 constexpr const char* kListName = "hookshot_pipeline_states.bin";
 constexpr const char* kReportName = "hookshot_pipeline_report.txt";
 // (the issue's template, its lines in its order: nx2/pipeline_share.py FIELDS, the same)
