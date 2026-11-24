@@ -84,7 +84,7 @@ class Http:
 def api_link_for(http, url):
     """https://github.com/<owner>/<repo>/releases/download/<tag>/<name> (or .../latest/download/<name>) -> the API's own link to
     that file, which redirects to a fresh download (the cached release links answered 504 for hours while the API answered)"""
-    m = re.match(r"https://git\.notrexed\.dev/([^/]+/[^/]+)/releases/(?:download/([^/]+)|latest/download)/([^/?]+)$", url)
+    m = re.match(r"https://github\.com/([^/]+/[^/]+)/releases/(?:download/([^/]+)|latest/download)/([^/?]+)$", url)
     if not m:
         return None
     repo, tag, name = m.groups()
