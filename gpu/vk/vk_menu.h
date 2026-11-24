@@ -171,6 +171,7 @@ bool menu_is_open();
 /// (hookshot) The game's scene tone mapped by PsychoV35: HDR set to Native on an HDR display, and the Tone mapper row so
 bool scene_tonemap_on();
 bool resolution_auto();       // (the game's dynamic resolution: Resolution Auto)
+void menu_shown_output(uint32_t* w, uint32_t* h);   // (the game's whole frame as shown: the Output resolution row's, the Handheld profile's own; the size FSR 4 warms up for)
 int resolution_scale();       // (the fixed path's scale in 1/10000: the Resolution row's, as a twelfth of the output)
 void menu_option_set(int id, int value);   // (from the game's side: 7 the mouse's sensitivity, the - and = keys)
 int menu_setting(int index, MkwVkSetting* out);   // (the control bridge, host/control.c: the rows with a value)

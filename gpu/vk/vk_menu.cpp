@@ -6442,6 +6442,10 @@ bool intel_prepare_side_by_side() {
 // (Intel's Windows driver only, where the row shows: Mesa's ANV ignores DISABLE_OPTIMIZATION, same instructions, spills and
 // compile time on an Iris Xe, its slow part register allocation at SIMD32)
 bool intel_quick_compute() { return opts.intel_quick != 0 && intel_compiler_row(); }   // (RX_VK_COMPUTE_QUICK_FIRST in it: menu_init)
+void menu_shown_output(uint32_t* w, uint32_t* h) {
+    const Out o = shown_output();
+    *w = o.w, *h = o.h;
+}
 bool resolution_auto() { return opts.resolution == 0; }
 int resolution_scale() {
     const int drawn = ur::snap_render(upscaler(), opts.resolution);

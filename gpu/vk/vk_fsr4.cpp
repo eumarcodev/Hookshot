@@ -36,7 +36,6 @@
 #endif
 
 #include "fsr4_tune.h"
-#include "menu/output.h"
 #include "upscaler_rows.h"
 #include "spirv_unroll.h"
 #include "vk_gprof.h"
@@ -1354,7 +1353,8 @@ void fsr4_probe() {
 
 void fsr4_prepare_shaders() {
     if (!load() || !tune::on()) return;
-    const auto [width, height] = shown_output();
+    uint32_t width = 0, height = 0;
+    menu_shown_output(&width, &height);
     if (!width || !height) return;
     // Native HDR can still present SDR scenes. Warm both SDK contexts when that mode is selected.
     const bool native_hdr = opts.hdr == 2 && env_switch("RX_VK_FSR4_HDR") != 0;
