@@ -1316,7 +1316,7 @@ bool prepare_result(VkResult result) {
 bool prepare_frame(uint32_t ow, uint32_t oh) {
     PrepareFrame work;
     const int scale = temporal_mode() == upscaler_rows::FSR4_AA ? 10000 : resolution_scale();
-    menu_game_size(scale > 0 ? scale / 10000.0f : 2.0f / 3.0f, work.frame.render_w, work.frame.render_h);
+    menu_game_size(scale > 0 ? scale / 10000.0f : 2.0f / 3.0f, &work.frame.render_w, &work.frame.render_h);
     work.frame.reset = true;
     VkCommandPoolCreateInfo pi{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
     pi.queueFamilyIndex = dev.queue_family;
