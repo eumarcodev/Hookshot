@@ -54,6 +54,8 @@ void logf_at(LogLevel, const char*, ...) {}
 // (staging()'s count of every arena it makes, and their time: the log's memory line)
 std::atomic<uint64_t> st_arena_makes{0};
 std::atomic<int64_t> st_arena_make_ns{0};
+enum class MemKind { Staging };   // (vk_memory.cpp's RX_VK_RES_LOG: what an allocation is for; staging() names it)
+struct MemKindScope { explicit MemKindScope(MemKind) {} };
 void consume(VkCommandBuffer) {
     for (auto& a : allocations) {
         if (!a->alive) continue;
