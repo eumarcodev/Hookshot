@@ -4,13 +4,13 @@ using System.Text.RegularExpressions;
 
 namespace HookshotBuilder;
 
-/// (hookshot, 2026-11-15) The Version menu: every release on git.notrexed.dev, read from Forgejo's API page by page when the menu
+/// (hookshot, 2026-11-15) The Version menu: every release on GitHub, read from GitHub's API page by page when the menu
 /// is opened, so a release made after this builder is in it too. The owner asked for a chooser that gets "absolutely every
 /// release". No WPF here: tests/test_builder_version_menu.py runs it under .NET 8
 static class ReleaseList
 {
-    const string Api = "https://git.notrexed.dev/api/v1/repos/Hookshot/Hookshot/releases";
-    public const int PageSize = 50;   // (Forgejo's most a page)
+    const string Api = "https://api.github.com/repos/eumarcodev/Hookshot/releases";
+    public const int PageSize = 50;   // (GitHub's most a page is 100)
     const int MostPages = 40;         // (2,000 releases: a stop for a server that never gives a short page)
     public const string SetupAsset = "HookshotBuilder.exe", SetupList = "hookshot-setup.txt";
     // (the first release whose setup installs the release it is told to, --tag: builder/setup/setup.c, v2.0.6. An older one's
@@ -62,7 +62,7 @@ static class ReleaseList
         return list;
     }
 
-    /// Every release, all pages, newest first; null when git.notrexed.dev did not answer (a page that fails part way: null too,
+    /// Every release, all pages, newest first; null when GitHub did not answer (a page that fails part way: null too,
     /// so the menu never shows a list cut short as if it were all)
     public static async Task<List<Entry>?> Fetch(CancellationToken token = default)
     {
@@ -73,7 +73,7 @@ static class ReleaseList
         {
             for (var page = 1; page <= MostPages; page++)
             {
-                var text = await http.GetStringAsync($"{Api}?limit={PageSize}&page={page}", token);
+                var text = await http.GetStringAsync($"{Api}?per_page={PageSize}&page={page}", token);
                 pages.Add(text);
                 using var doc = JsonDocument.Parse(text);
                 if (doc.RootElement.ValueKind != JsonValueKind.Array || doc.RootElement.GetArrayLength() < PageSize) break;

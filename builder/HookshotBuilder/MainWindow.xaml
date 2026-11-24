@@ -212,7 +212,7 @@
                       IsChecked="True" Margin="0,12,0,0"
                       ToolTip="Prepares the game's shaders at the end of the build, a few minutes (longer on some GPUs). Unticked, the game prepares them at its first start, behind a black window."/>
             <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,12,0,0" VerticalAlignment="Center">
-              <!-- (the Version menu, ReleaseList.cs: the track's newest, or any release on git.notrexed.dev, read when it opens; saved) -->
+              <!-- (the Version menu, ReleaseList.cs: the track's newest, or any release on GitHub, read when it opens; saved) -->
               <TextBlock x:Name="VersionLabel" Style="{StaticResource Label}" Text="VERSION" VerticalAlignment="Center" Margin="0,0,12,0"/>
               <ComboBox x:Name="VersionBox" Width="240" Style="{StaticResource Choice}" IsEditable="False"
                         AutomationProperties.Name="Version" AutomationProperties.LabeledBy="{Binding ElementName=VersionLabel}"
