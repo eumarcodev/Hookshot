@@ -138,7 +138,7 @@ PCS = [
     dict(name="RX 6800 XT, RADV",
          facts=(0x1002, 0x73BF, "MESA_RADV", 0, "DISCRETE_GPU", "Mesa 26.2.5", "AMD Radeon RX 6800 XT (RADV NAVI21)", 0, 0,
                 16368, 16000, 32000, 16, 16, 8, 1, 1, 1, 0, 0, 1, 1, 64, 64, 0xFF),
-         on="fetch_bounds networks_left_out gather_offset position_invariant dma_buf_imports allowance_at_count_rule mirrors "
+         on="frag_shuffle_fallback fetch_bounds networks_left_out gather_offset position_invariant dma_buf_imports allowance_at_count_rule mirrors "
             "split_ub_flush warp64 batch_submits mma_unroll_try fsr4_tune room_in_blocks_rule "
             "threaded_auto_render threaded_auto_recorder",
          num=(0, 2, 0, 1, 85, 4, 11000, 3072, 768, 512, 2000, -1, 256, 24, 64, 32, 97, 5, 6, 4, 8, 6, 4)),
@@ -146,7 +146,7 @@ PCS = [
     dict(name="RX 9070 XT, RADV",
          facts=(0x1002, 0x7550, "MESA_RADV", 0, "DISCRETE_GPU", "Mesa 26.2.6", "AMD Radeon RX 9070 XT (RADV GFX1201)", 0, 0,
                 16304, 15300, 32600, 16, 16, 8, 1, 1, 1, 0, 0, 1, 1, 64, 64, 0xFF),
-         on="fetch_bounds networks_left_out gather_offset position_invariant dma_buf_imports allowance_at_count_rule mirrors "
+         on="frag_shuffle_fallback fetch_bounds networks_left_out gather_offset position_invariant dma_buf_imports allowance_at_count_rule mirrors "
             "split_ub_flush warp64 mma_unroll_try fsr4_tune room_in_blocks_rule rdna4 "
             "threaded_auto_render threaded_auto_recorder",
          num=(0, 2, 0, 1, 85, 4, 11000, 3072, 768, 512, 1912, -1, 256, 24, 64, 32, 97, 5, 6, 4, 8, 6, 4)),
@@ -156,7 +156,7 @@ PCS = [
     dict(name="RX 580 (8 GB), RADV on GCN",
          facts=(0x1002, 0x67DF, "MESA_RADV", 0, "DISCRETE_GPU", "Mesa 26.2.5", "AMD Radeon RX 580 Series (RADV POLARIS10)", 0, 0,
                 8192, 8000, 16000, 8, 8, 4, 0, 1, 1, 0, 0, 0, 1, 64, 64, 0),
-         on="fetch_bounds networks_left_out gather_offset position_invariant dma_buf_imports allowance_at_count_rule mirrors "
+         on="frag_shuffle_fallback fetch_bounds networks_left_out gather_offset position_invariant dma_buf_imports allowance_at_count_rule mirrors "
             "split_ub_flush warp64 mma_unroll_try fsr4_tune astc_bc_all room_in_blocks_rule squeeze_damped "
             "threaded_auto_render drop_modules_small_ram",
          num=(0, 2, 50000, 1, 85, 4, 4778, 2048, 666, 500, 1000, -1, 256, 24, 32, 16, 97, 1, 2, 2, 4, 4, 2)),
@@ -167,7 +167,7 @@ PCS = [
     dict(name="RX Vega 64 (8 GB), RADV on GFX9",
          facts=(0x1002, 0x687F, "MESA_RADV", 0, "DISCRETE_GPU", "Mesa 26.2.5", "AMD Radeon RX Vega (RADV VEGA10)", 0, 0,
                 8176, 7900, 16000, 8, 8, 8, 0, 1, 1, 0, 0, 1, 1, 64, 64, 0),
-         on="fetch_bounds networks_left_out gather_offset position_invariant dma_buf_imports allowance_at_count_rule mirrors split_ub_flush "
+         on="frag_shuffle_fallback fetch_bounds networks_left_out gather_offset position_invariant dma_buf_imports allowance_at_count_rule mirrors split_ub_flush "
             "warp64 batch_submits mma_unroll_try fsr4_tune astc_bc_all room_in_blocks_rule squeeze_damped "
             "threaded_auto_render threaded_auto_recorder drop_modules_small_ram",
          num=(0, 2, 0, 1, 85, 4, 4769, 2044, 658, 493, 987, -1, 256, 12, 32, 16, 97, 1, 2, 2, 4, 4, 2)),
@@ -178,7 +178,7 @@ PCS = [
     dict(name="Steam Deck (LCD), RADV",
          facts=(0x1002, 0x163F, "MESA_RADV", 0, "INTEGRATED_GPU", "Mesa 25.1.0", "AMD Custom GPU 0405 (RADV VANGOGH)", 0, 1,
                 7168, 6800, 14800, 8, 8, 4, 1, 1, 1, 0, 0, 1, 1, 64, 64, 0xFF),
-         on="fetch_bounds networks_left_out gather_offset position_invariant dma_buf_imports allowance_at_count_rule "
+         on="frag_shuffle_fallback fetch_bounds networks_left_out gather_offset position_invariant dma_buf_imports allowance_at_count_rule "
             "split_ub_flush warp64 batch_submits mma_unroll_try fsr4_tune gpu_clock_peak small_vram_textures astc_bc_all "
             "squeeze_damped linux_hold_caps_budget threaded_auto_render drop_modules_small_ram",
          num=(0, 2, 0, 1, 85, 16, 2560, 1792, 566, 425, 512, -1, 256, 0, 32, 16, 90, 1, 2, 2, 4, 4, 2)),
@@ -215,7 +215,7 @@ PCS = [
     dict(name="Arc B570, Intel's Windows driver 101.9175",
          facts=(0x8086, 0xE20C, "INTEL_PROPRIETARY_WINDOWS", INTEL | 9175, "DISCRETE_GPU", "101.9175", "Intel(R) Arc(TM) B570 Graphics",
                 1, 0, 10074, 9305, 16311, 12, 12, 6, 1, 1, 1, 0, 0, 1, 1, 32, 32, 0xFF),
-         on="acquire_ahead fetch_bounds networks_left_out gather_offset position_invariant compute_builds_serial pcache_fetch_lock split_before_draw "
+         on="fetch_bounds networks_left_out gather_offset position_invariant compute_builds_serial pcache_fetch_lock split_before_draw "
             "allowance_at_count_rule mirrors ub_snapshot split_ub_flush native_float_add occ_copy intel_side_by_side_auto "
             "room_in_blocks_rule threaded_auto_render threaded_auto_recorder",
          num=(0, 0, 0, 2, 0, 4, 5876, 2048, 768, 512, 1163, -1, 256, 24, 64, 32, 97, 3, 4, 4, 6, 6, 3)),
@@ -281,13 +281,21 @@ PCS = [
             "amd_cloth_no_optimizer fault_gate_serial astc_on_cpu allowance_at_count_rule split_ub_flush warp64 fsr4_tune "
             "astc_bc_all threaded_auto_render",
          num=(0, 0, 0, 2, 85, 16, 7162, 3072, 768, 512, 512, -1, 256, 0, 64, 32, 90, 1, 6, 4, 8, 6, 4)),
+    # (Krackan Point gfx1152: ASTC on the CPU; the float add stays the loop, as native_fadd_listed has no AMD row here)
+    dict(name="Radeon 860M (0x1002:0x1114), AMD's Windows driver 26.10.1 (LLPC)",
+         facts=(0x1002, 0x1114, "AMD_PROPRIETARY", 0x8001a0, "INTEGRATED_GPU", "26.10.1 (LLPC)", "AMD Radeon(TM) 860M Graphics", 1, 0,
+                6144, 12288, 26283, 16, 16, 8, 1, 1, 1, 1, 0, 1, 1, 64, 64, 0xF0),
+         on="fetch_bounds networks_left_out bc_copy_per_layer gather_offset frag_shuffle_fallback position_invariant mesh_no_optimizer "
+            "amd_cloth_no_optimizer fault_gate_serial astc_on_cpu allowance_at_count_rule split_ub_flush warp64 fsr4_tune "
+            "astc_bc_all dlss_cnn threaded_auto_render threaded_auto_recorder",
+         num=(0, 0, 0, 2, 85, 16, 8192, 1700, 768, 512, 512, -1, 256, 0, 32, 16, 90, 1, 6, 4, 8, 6, 4)),
 ]
 
 # The switches (device_policy_env). The fields a switch can set, in the Sw enum's order (its bit in set_by_switch), and what
 # else the cases look at: the import chunk (which follows the mirrors) and the texture budget (which follows astc_on_cpu)
 SW = ["astc_on_cpu", "batch_submits", "compute_builds_serial", "pcache_fetch_lock", "split_before_draw", "ub_snapshot",
       "split_ub_flush", "occ_copy", "mirrors", "fsr4_tune", "position_invariant", "equal_depth_bias", "cap_spare_max",
-      "staging_keep", "workers", "mesh_fallback_strict_fmul"]
+      "staging_keep", "workers", "mesh_fallback_strict_fmul", "bc_copy_per_layer"]
 ENV_FIELDS = SW + ["import_chunk_mb", "texture_budget"]
 NVIDIA, RADV, B580, UHD, AMD_WIN, RAPHAEL, SMALL = (
     "RTX 3090 (24 GB), NVIDIA's Linux driver, 24 threads", "RX 6800 XT, RADV", "Arc B580, Intel's Windows driver 101.9154",
@@ -514,11 +522,11 @@ static void env_case(int i, const D& d) {
     device_policy_env(p, f, get);
     std::printf("ENV %d astc_on_cpu=%d batch_submits=%d compute_builds_serial=%d pcache_fetch_lock=%d split_before_draw=%d "
                 "ub_snapshot=%d split_ub_flush=%d occ_copy=%d mirrors=%d fsr4_tune=%d position_invariant=%d equal_depth_bias=%g "
-                "cap_spare_max=%lld staging_keep=%lld workers=%u mesh_fallback_strict_fmul=%d import_chunk_mb=%u texture_budget=%lld set=%u notes=%s\n",
+                "cap_spare_max=%lld staging_keep=%lld workers=%u mesh_fallback_strict_fmul=%d bc_copy_per_layer=%d import_chunk_mb=%u texture_budget=%lld set=%u notes=%s\n",
                 i, (int)p.astc_on_cpu, (int)p.batch_submits, (int)p.compute_builds_serial, (int)p.pcache_fetch_lock,
                 (int)p.split_before_draw, (int)p.ub_snapshot, (int)p.split_ub_flush, (int)p.occ_copy, (int)p.mirrors, (int)p.fsr4_tune,
                 (int)p.position_invariant, (double)p.equal_depth_bias, mbs(p.cap_spare_max), mbs(p.staging_keep), p.workers,
-                (int)p.mesh_fallback_strict_fmul,
+                (int)p.mesh_fallback_strict_fmul, (int)p.bc_copy_per_layer,
                 (unsigned)p.import_chunk_mb, mbs(p.texture_budget), (unsigned)p.set_by_switch, p.switch_notes);
     if (i == 0 || p.set_by_switch) log_block(1000 + i, p, f);   // (the block with switches set: still six lines under their length)
 }
