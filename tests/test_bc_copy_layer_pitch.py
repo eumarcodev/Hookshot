@@ -38,7 +38,7 @@ FIXTURE = r"""
 #include <cstdlib>
 #include <cstring>
 #include <vector>
-struct Texture { VkImage image = (VkImage)1; };
+struct Texture { VkImage image = (VkImage)1; VkFormat format = VK_FORMAT_BC3_UNORM_BLOCK; };   // (bc_encode_into: BC1 for an image kept BC1)
 struct { struct { bool bc_copy_per_layer = false; } policy; } dev;
 VkPipeline bc_pipe = (VkPipeline)1, bc7_pipe = (VkPipeline)2;
 VkPipelineLayout bc_layout = (VkPipelineLayout)1;
