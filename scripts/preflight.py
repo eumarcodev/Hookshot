@@ -9,7 +9,11 @@
             only kernel32, user32, gdi32, advapi32 and the UCRT. NVIDIA's SDK is not part of it (its license is yours to
             accept: scripts/ngx_sdk.py); the files DLSS adds are not compiled here.
   tests     tests/run_all.py here and on --base (default origin/develop, in a git worktree under _deps/), and the checks
-            that fail here and not there. A check that fails on both is not yours; it is listed, not counted.
+            that fail here and not there. A check that fails on both is not yours; it is listed, not counted. They run
+            as CI's do: Python 3.12 in _deps/venv312 with CI's packages (--setup makes it when `py -3.12` exists; without it
+            this Python, and the checks that need a package are skipped or fail on both sides), and llvm-mingw's compilers
+            on PATH (CI's Windows job has a compiler; without one most checks skip). About 8 minutes; the base's result
+            is kept in _deps/ by its commit, so the next run takes only this side.
 
 Exit 0 when nothing new failed. It says what it could not run (no compiler, no llvm-mingw), and a step it could not run is
 not a pass: say so in the pull request. The Linux AppImage job and the Linux runs of the checks are CI's; this does not
@@ -26,6 +30,7 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPS = os.path.join(ROOT, "_deps")
 WORKFLOW = os.path.join(ROOT, ".github", "workflows", "vulkan-dlss.yml")
+CI_PACKAGES = ["zstandard==0.25.0", "pillow==13.0.0", "numpy==2.5.4", "lz4==4.4.5"]   # (source-regressions.yml's)
 ALLOWED_IMPORTS = re.compile(r"^(kernel32|user32|gdi32|advapi32)\.dll$|^api-ms-win-crt-[a-z0-9-]+\.dll$", re.I)
 FAIL_LINE = re.compile(r"^FAIL\s+[\d.]+s\s+(tests/\S+)", re.M)
 WIN = os.name == "nt"
@@ -58,6 +63,17 @@ def mingw_dir():
     return None
 
 
+def test_python():
+    """The venv --setup made (Python 3.12 and CI's packages), else the Python that runs this."""
+    v = os.path.join(DEPS, "venv312", "Scripts" if WIN else "bin", "python.exe" if WIN else "python")
+    return v if os.path.isfile(v) else sys.executable
+
+
+def test_env():
+    m = mingw_dir()
+    return {"PATH": os.path.join(m, "bin") + os.pathsep + os.environ["PATH"]} if m else {}
+
+
 def header_pins():
     """(repository, commit, path under the clone) of each header repository the DLSS workflow checks out."""
     text = open(WORKFLOW, encoding="utf-8").read()
@@ -88,6 +104,16 @@ def setup():
                     ["git", "fetch", "-q", "--depth", "1", "https://github.com/%s.git" % repo, sha],
                     ["git", "checkout", "-q", "FETCH_HEAD"]):
             code, out = run(cmd, cwd=dest)
+            if code:
+                print(out)
+                return code
+    if not os.path.isfile(test_python()) or test_python() == sys.executable:
+        py = ["py", "-3.12"] if WIN else ["python3.12"]
+        code, out = run(py + ["-m", "venv", os.path.join("_deps", "venv312")])
+        if code:
+            say("no Python 3.12 (`py install 3.12`): the checks will run on this Python, which may lack CI's packages")
+        else:
+            code, out = run([test_python(), "-m", "pip", "install", "-q", "--disable-pip-version-check", "--no-deps"] + CI_PACKAGES)
             if code:
                 print(out)
                 return code
@@ -135,7 +161,8 @@ def build():
 
 
 def failing(root):
-    code, out = run([sys.executable, "-I", "-B", os.path.join("tests", "run_all.py"), "--jobs", str(max(2, (os.cpu_count() or 4) // 2))], cwd=root)
+    code, out = run([test_python(), "-I", "-B", os.path.join("tests", "run_all.py"), "--jobs", str(max(2, (os.cpu_count() or 4) // 2))],
+                    cwd=root, env=test_env())
     m = re.search(r"(\d+) passed, (\d+) failed, (\d+) skipped", out)
     return set(FAIL_LINE.findall(out)), (m.groups() if m else ("?", "?", "?"))
 
@@ -145,21 +172,31 @@ def tests(base):
     if code:
         say("tests NOT RUN against %s: no such revision (git fetch)" % base)
         return 2
-    wt = os.path.join(DEPS, "base-worktree")
-    if os.path.isdir(wt):
-        run(["git", "worktree", "remove", "--force", wt])
-    code, out = run(["git", "worktree", "add", "--detach", "-f", wt, base])
-    if code:
-        print(out)
-        return 2
-    try:
-        say("checks here")
-        mine, n_mine = failing(ROOT)
-        say("%s passed, %s failed, %s skipped; checks on %s" % (*n_mine, base))
-        theirs, n_base = failing(wt)
-        say("%s passed, %s failed, %s skipped" % n_base)
-    finally:
-        run(["git", "worktree", "remove", "--force", wt])
+    sha = out.strip()
+    say("checks here (with %s%s)" % (os.path.relpath(test_python(), ROOT) if test_python() != sys.executable else "this Python",
+                                     ", llvm-mingw on PATH" if test_env() else ""))
+    mine, n_mine = failing(ROOT)
+    say("%s passed, %s failed, %s skipped" % n_mine)
+    cache = os.path.join(DEPS, "base-failing-%s.txt" % sha[:12])
+    if os.path.isfile(cache):
+        theirs = set(open(cache, encoding="utf-8").read().split())
+        say("checks on %s: its failures from %s" % (base, os.path.relpath(cache, ROOT)))
+    else:
+        wt = os.path.join(DEPS, "base-worktree")
+        if os.path.isdir(wt):
+            run(["git", "worktree", "remove", "--force", wt])
+        code, out = run(["git", "worktree", "add", "--detach", "-f", wt, base])
+        if code:
+            print(out)
+            return 2
+        try:
+            say("checks on %s" % base)
+            theirs, n_base = failing(wt)
+            say("%s passed, %s failed, %s skipped" % n_base)
+        finally:
+            run(["git", "worktree", "remove", "--force", wt])
+        with open(cache, "w", encoding="utf-8") as f:
+            f.write("\n".join(sorted(theirs)) + "\n")
     new = sorted(mine - theirs)
     old = sorted(mine & theirs)
     if old:

@@ -948,7 +948,8 @@ The three header repositories, at the commits `.github/workflows/vulkan-dlss.yml
 
 `python -I scripts/preflight.py --setup` does all of the above from the workflow's own pins, and plain
 `python -I scripts/preflight.py` then builds, checks the imports and compares the checks with `develop`'s: it is the
-step before every pull request (CONTRIBUTING.md). By hand, when the workflow's pins change, take the new ones from it. Then, through the job queue, from the clone's folder (Git Bash
+step before every pull request (CONTRIBUTING.md). `--setup` also makes `_deps/venv312` (Python 3.12 with CI's packages: `py install 3.12` first on Windows) and the checks run with it and
+llvm-mingw's compilers on PATH, as CI's do: about 8 minutes, and `develop`'s result is kept by its commit. By hand, when the workflow's pins change, take the new ones from it. Then, through the job queue, from the clone's folder (Git Bash
 syntax; the same variables with `$env:` in PowerShell):
 
 ```
