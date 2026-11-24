@@ -62,6 +62,26 @@ template <class T>
 void release(T*& p) {
     if (p) p->Release(), p = nullptr;
 }
+/// The three COM functions the encoder needs, taken from ole32 at the first picture: hookshot_vk.dll imports only kernel32, user32,
+/// gdi32, advapi32 and the UCRT (the DLSS workflow's import check, as vk_menu.cpp's share_proc keeps it). Without ole32 they are
+/// null and the picture is written by write_png.
+struct Com {
+    HRESULT(WINAPI* init)(LPVOID, DWORD) = nullptr;
+    void(WINAPI* uninit)() = nullptr;
+    HRESULT(WINAPI* create)(REFCLSID, LPUNKNOWN, DWORD, REFIID, LPVOID*) = nullptr;
+};
+const Com& com() {
+    static const Com c = [] {
+        Com r;
+        if (HMODULE m = LoadLibraryExW(L"ole32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32)) {
+            r.init = (decltype(r.init))(void*)GetProcAddress(m, "CoInitializeEx");
+            r.uninit = (decltype(r.uninit))(void*)GetProcAddress(m, "CoUninitialize");
+            r.create = (decltype(r.create))(void*)GetProcAddress(m, "CoCreateInstance");
+        }
+        return r;
+    }();
+    return c;
+}
 } // namespace
 
 bool screenshot_write(const std::string& path, const uint8_t* rgba, uint32_t w, uint32_t h) {
@@ -76,13 +96,14 @@ bool screenshot_write(const std::string& path, const uint8_t* rgba, uint32_t w, 
         bgr[i * 3 + 1] = rgba[i * 4 + 1];
         bgr[i * 3 + 2] = rgba[i * 4 + 0];
     }
-    const HRESULT co = CoInitializeEx(nullptr, COINIT_MULTITHREADED);   // (this worker thread's own; S_FALSE: already was)
+    const Com& ole = com();
+    const HRESULT co = ole.init ? ole.init(nullptr, COINIT_MULTITHREADED) : E_FAIL;   // (this worker thread's own; S_FALSE: already was)
     IWICImagingFactory* factory = nullptr;
     IWICStream* stream = nullptr;
     IWICBitmapEncoder* encoder = nullptr;
     IWICBitmapFrameEncode* frame = nullptr;
     WICPixelFormatGUID format = GUID_WICPixelFormat24bppBGR;
-    HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (void**)&factory);
+    HRESULT hr = ole.create ? ole.create(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (void**)&factory) : E_FAIL;
     const char* step = "the imaging factory";
     if (SUCCEEDED(hr)) step = "the stream", hr = factory->CreateStream(&stream);
     if (SUCCEEDED(hr)) step = "the file", hr = stream->InitializeFromFilename(wide, GENERIC_WRITE);
@@ -100,7 +121,7 @@ bool screenshot_write(const std::string& path, const uint8_t* rgba, uint32_t w, 
     release(encoder);
     release(stream);
     release(factory);
-    if (SUCCEEDED(co)) CoUninitialize();
+    if (SUCCEEDED(co) && ole.uninit) ole.uninit();
     if (FAILED(hr)) {
         logf("vk: screenshot: Windows' PNG encoder failed at %s (%#lx): written without compression", step, (unsigned long)hr);
         DeleteFileW(wide);   // (what the encoder left of it)
