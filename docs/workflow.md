@@ -80,7 +80,9 @@ problem with a log outranks an NVIDIA one of the same severity.
 4. **Test.**
    - A game-free test that fails without the change (see AGENTS.md: tests read the source; agents: the
      [fix-with-test skill](../.claude/skills/fix-with-test/SKILL.md)).
-   - `python -I -B tests/run_all.py`, all of it.
+   - `python -I scripts/preflight.py`, **before the pull request is opened**: the renderer built as CI's Windows job
+     builds it (with the DLL's import check), and `tests/run_all.py` here and on `develop`, so what fails only here
+     is yours. Its summary goes in the description; a step it could not run is named there.
    - In the game, on your hardware: what you did and what you saw, with numbers from `hookshot_log.txt` for performance.
    - Add a row to [tested configurations](tested-configurations.md) for each run you measured.
    - Say what you could not test (another OS, another vendor, real input devices).

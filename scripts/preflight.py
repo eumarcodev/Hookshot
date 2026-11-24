@@ -1,0 +1,201 @@
+"""What CI runs, run here before a pull request is opened (CONTRIBUTING.md, "Before you open a pull request").
+
+    python -I scripts/preflight.py [--setup] [--skip build|tests] [--base origin/develop]
+
+  --setup   Windows: fetch what the renderer's build needs into _deps/ (git-ignored): the pinned llvm-mingw and the three
+            header repositories at the commits .github/workflows/vulkan-dlss.yml pins. Needs the network, once.
+  build     The renderer alone with AMD FSR 4, as the "Windows Vulkan back end with NVIDIA DLSS and AMD FSR 4" job builds it
+            (RX_VK_ONLY=1, HOOKSHOT_FSR=1, through the job queue), then that job's import check: hookshot_vk.dll may import
+            only kernel32, user32, gdi32, advapi32 and the UCRT. NVIDIA's SDK is not part of it (its license is yours to
+            accept: scripts/ngx_sdk.py); the files DLSS adds are not compiled here.
+  tests     tests/run_all.py here and on --base (default origin/develop, in a git worktree under _deps/), and the checks
+            that fail here and not there. A check that fails on both is not yours; it is listed, not counted.
+
+Exit 0 when nothing new failed. It says what it could not run (no compiler, no llvm-mingw), and a step it could not run is
+not a pass: say so in the pull request. The Linux AppImage job and the Linux runs of the checks are CI's; this does not
+stand in for them.
+"""
+import argparse
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEPS = os.path.join(ROOT, "_deps")
+WORKFLOW = os.path.join(ROOT, ".github", "workflows", "vulkan-dlss.yml")
+ALLOWED_IMPORTS = re.compile(r"^(kernel32|user32|gdi32|advapi32)\.dll$|^api-ms-win-crt-[a-z0-9-]+\.dll$", re.I)
+FAIL_LINE = re.compile(r"^FAIL\s+[\d.]+s\s+(tests/\S+)", re.M)
+WIN = os.name == "nt"
+
+
+def say(msg):
+    print("preflight: " + msg, flush=True)
+
+
+def run(cmd, cwd=ROOT, env=None, log=None):
+    """Runs cmd, returns (exit code, output). With log, the output goes to that file and its tail is what comes back."""
+    e = dict(os.environ, **(env or {}))
+    p = subprocess.run(cmd, cwd=cwd, env=e, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    out = p.stdout.decode("utf-8", "replace")
+    if log:
+        with open(log, "w", encoding="utf-8") as f:
+            f.write(out)
+    return p.returncode, out
+
+
+def mingw_dir():
+    """The llvm-mingw folder: HOOKSHOT_MINGW, else the one --setup unpacked under _deps/llvm."""
+    if os.environ.get("HOOKSHOT_MINGW") and os.path.isdir(os.environ["HOOKSHOT_MINGW"]):
+        return os.environ["HOOKSHOT_MINGW"]
+    base = os.path.join(DEPS, "llvm")
+    if os.path.isdir(base):
+        for d in sorted(os.listdir(base)):
+            if os.path.isfile(os.path.join(base, d, "bin", "clang++.exe")):
+                return os.path.join(base, d)
+    return None
+
+
+def header_pins():
+    """(repository, commit, path under the clone) of each header repository the DLSS workflow checks out."""
+    text = open(WORKFLOW, encoding="utf-8").read()
+    pins = re.findall(r"repository: (\S+)\s+ref: ([0-9a-f]{40})[^\n]*\n\s+path: (_deps/cpm/\S+)", text)
+    if len(pins) != 3:
+        raise SystemExit("preflight: expected 3 pinned header repositories in vulkan-dlss.yml, found %d" % len(pins))
+    return pins
+
+
+def setup():
+    if not WIN:
+        say("--setup is for Windows (llvm-mingw); on Linux the distro's clang and headers are what the build uses")
+        return 0
+    os.makedirs(DEPS, exist_ok=True)
+    if not mingw_dir():
+        say("llvm-mingw (scripts/release_parts.py: the official release, SHA-256 checked)")
+        code, out = run([sys.executable, "-I", os.path.join("scripts", "release_parts.py"), "llvm-mingw", os.path.join("_deps", "llvm")])
+        if code:
+            print(out)
+            return code
+    for repo, sha, path in header_pins():
+        dest = os.path.join(ROOT, *path.split("/"))
+        if os.path.isdir(os.path.join(dest, ".git")):
+            continue
+        say("fetching %s at %s" % (repo, sha[:8]))
+        os.makedirs(dest, exist_ok=True)
+        for cmd in (["git", "init", "-q"],
+                    ["git", "fetch", "-q", "--depth", "1", "https://github.com/%s.git" % repo, sha],
+                    ["git", "checkout", "-q", "FETCH_HEAD"]):
+            code, out = run(cmd, cwd=dest)
+            if code:
+                print(out)
+                return code
+    say("setup done: " + (mingw_dir() or "?"))
+    return 0
+
+
+def build():
+    """0 built and its imports are allowed, 1 failed, 2 could not run."""
+    env = {"RX_VK_ONLY": "1", "RX_RELEASE": "1", "HOOKSHOT_FSR": "1", "OOT_WORK": os.path.join(DEPS, "vk-work")}
+    if WIN:
+        mingw = mingw_dir()
+        cpm = os.path.join(DEPS, "cpm")
+        if not mingw or not os.path.isdir(cpm):
+            say("renderer build NOT RUN: no llvm-mingw or headers under _deps/ (python -I scripts/preflight.py --setup)")
+            return 2
+        env.update(HOOKSHOT_MINGW=mingw, RX_CPM=cpm)
+    elif shutil.which("clang++") is None:
+        say("renderer build NOT RUN: no clang++")
+        return 2
+    log = os.path.join(DEPS, "vk-build.log")
+    os.makedirs(DEPS, exist_ok=True)
+    say("building the renderer with AMD FSR 4 (log: _deps/vk-build.log)")
+    t0 = time.time()
+    code, out = run([sys.executable, "-I", os.path.join("scripts", "job_queue.py"), "run", "preflight-vk", "--mode", "build", "--",
+                     sys.executable, "-I", os.path.join("nx2", "build.py"), "--standalone", "--jobs", str(max(2, (os.cpu_count() or 4) // 2))],
+                    env=env, log=log)
+    if code or "with AMD FSR 4" not in out:
+        errs = [l for l in out.splitlines() if "error" in l.lower()][:12]
+        say("renderer build FAILED (%d s):\n  %s" % (time.time() - t0, "\n  ".join(errs) or out[-800:]))
+        return 1
+    say("renderer built (%d s)" % (time.time() - t0))
+    if not WIN:
+        return 0
+    dll = os.path.join(DEPS, "vk-work", "sa", "build", "hookshot_vk.dll")
+    code, out = run([os.path.join(mingw_dir(), "bin", "llvm-objdump.exe"), "-p", dll])
+    names = sorted({m.strip() for m in re.findall(r"DLL Name: (\S+)", out)})
+    bad = [n for n in names if not ALLOWED_IMPORTS.match(n)]
+    if bad:
+        say("imports FAILED: hookshot_vk.dll imports a DLL that is not Windows' own: " + ", ".join(bad) +
+            " (load it at its first use, as gpu/vk/vk_menu.cpp share_proc does)")
+        return 1
+    say("imports ok (%d DLLs, all allowed)" % len(names))
+    return 0
+
+
+def failing(root):
+    code, out = run([sys.executable, "-I", "-B", os.path.join("tests", "run_all.py"), "--jobs", str(max(2, (os.cpu_count() or 4) // 2))], cwd=root)
+    m = re.search(r"(\d+) passed, (\d+) failed, (\d+) skipped", out)
+    return set(FAIL_LINE.findall(out)), (m.groups() if m else ("?", "?", "?"))
+
+
+def tests(base):
+    code, out = run(["git", "rev-parse", "--verify", "-q", base])
+    if code:
+        say("tests NOT RUN against %s: no such revision (git fetch)" % base)
+        return 2
+    wt = os.path.join(DEPS, "base-worktree")
+    if os.path.isdir(wt):
+        run(["git", "worktree", "remove", "--force", wt])
+    code, out = run(["git", "worktree", "add", "--detach", "-f", wt, base])
+    if code:
+        print(out)
+        return 2
+    try:
+        say("checks here")
+        mine, n_mine = failing(ROOT)
+        say("%s passed, %s failed, %s skipped; checks on %s" % (*n_mine, base))
+        theirs, n_base = failing(wt)
+        say("%s passed, %s failed, %s skipped" % n_base)
+    finally:
+        run(["git", "worktree", "remove", "--force", wt])
+    new = sorted(mine - theirs)
+    old = sorted(mine & theirs)
+    if old:
+        say("%d checks fail here and on %s: not yours (e.g. %s)" % (len(old), base, ", ".join(old[:3])))
+    if new:
+        say("tests FAILED: %d fail here and not on %s:\n  %s" % (len(new), base, "\n  ".join(new)))
+        return 1
+    say("tests ok: nothing fails here that passes on %s" % base)
+    return 0
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--setup", action="store_true")
+    ap.add_argument("--skip", action="append", default=[], choices=["build", "tests"])
+    ap.add_argument("--base", default="origin/develop")
+    a = ap.parse_args()
+    if a.setup:
+        code = setup()
+        if code:
+            return code
+    results = {}
+    if "build" not in a.skip:
+        results["renderer build"] = build()
+    if "tests" not in a.skip:
+        results["tests against " + a.base] = tests(a.base)
+    print()
+    for name, code in results.items():
+        print("  %-34s %s" % (name, {0: "ok", 1: "FAILED", 2: "NOT RUN"}[code]))
+    if any(c == 1 for c in results.values()):
+        return 1
+    if any(c == 2 for c in results.values()):
+        say("a step could not run: the pull request says so")
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

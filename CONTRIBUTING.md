@@ -295,7 +295,11 @@ the development guide's [reference](docs/development.md#switches-for-testing-and
 5. Include screenshots when the change shows on screen: graphics, the menu, the start-up screen, an overlay, a
    message. Before and after for a fix, the new screen for a feature, and the sizes or settings it was checked at. A
    screenshot of the game is fine; the rule above is about game files, not pictures of the game.
-6. Run the relevant checks. CI must pass; a change that only works on your machine is not ready. CI has no game, so
+6. **Run `python -I scripts/preflight.py` before you open the PR, every time** (once, `--setup` fetches what it needs
+   into `_deps/`). It builds the renderer the way CI's Windows job does, checks the DLL's imports, and runs every
+   game-free check here and on `develop`, so a PR does not find its build error or its new failing check in CI. Paste
+   its summary in the description; a step it could not run (no compiler, no network) is named there, not left out.
+   The Linux AppImage job and the Linux runs of the checks stay CI's. Run the relevant checks. CI must pass; a change that only works on your machine is not ready. CI has no game, so
    also run the change in the game and put what you measured in the description: before and after on the same
    scene for a performance change, the bug gone for a fix. An untested change is opened as a draft.
 7. Rebase or merge `main` when it has moved, and resolve conflicts in your branch rather than in the review.

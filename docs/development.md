@@ -946,7 +946,9 @@ The three header repositories, at the commits `.github/workflows/vulkan-dlss.yml
 | KhronosGroup/SPIRV-Headers | `spirv-headers/vulkan-sdk-1.4.341.0` |
 | GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator | `vulkanmemoryallocator/v3.3.0` |
 
-When the workflow's pins change, take the new ones from it. Then, through the job queue, from the clone's folder (Git Bash
+`python -I scripts/preflight.py --setup` does all of the above from the workflow's own pins, and plain
+`python -I scripts/preflight.py` then builds, checks the imports and compares the checks with `develop`'s: it is the
+step before every pull request (CONTRIBUTING.md). By hand, when the workflow's pins change, take the new ones from it. Then, through the job queue, from the clone's folder (Git Bash
 syntax; the same variables with `$env:` in PowerShell):
 
 ```
