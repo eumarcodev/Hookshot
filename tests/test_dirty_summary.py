@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))   # (python -I leaves t
 from srccut import block
 
 ROOT = Path(__file__).resolve().parent.parent
-RUN_ALL_ARGS = ["--cc", "{cc}"]
+RUN_ALL_ARGS = ["--cc", "clang"]   # (the compiler the build uses for the runtime, nx2/build.py)
 
 FIXTURE = r"""
 #include <stdint.h>

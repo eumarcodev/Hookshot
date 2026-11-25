@@ -223,6 +223,7 @@ FIXTURE = r'''
 #include "hos.h"
 uint8_t *A64_MEM;
 uint8_t a64_dirty[A64_DIRTY_PAGES];
+uint8_t a64_dirty_sum[A64_DIRTY_PAGES >> 8];   /* (the marks' 256-page chunk summary, host/rx_backend.c collect_in) */
 long polls;
 @MARK_WRITTEN@
 #include "nn_libc.c"
@@ -284,7 +285,7 @@ static void one(int f, uint64_t a0, uint64_t a1, uint64_t a2) {
     if (cases % 8192 == 0) hi = WINDOW;
     else if (f <= MEMSET) lo = a0 < 64 ? 0 : a0 - 64, hi = a0 + a2 + 64 > WINDOW ? WINDOW : a0 + a2 + 64;
     memcpy(before + lo, A64_MEM + lo, hi - lo);
-    memset(a64_dirty, 0, sizeof a64_dirty);
+    memset(a64_dirty, 0, sizeof a64_dirty); memset(a64_dirty_sum, 0, sizeof a64_dirty_sum);
     uint64_t r;
     switch (f) {
     case MEMCPY: case MEMMOVE: r = m_copy(a0, a1, a2); break;
@@ -296,7 +297,7 @@ static void one(int f, uint64_t a0, uint64_t a1, uint64_t a2) {
     memcpy(after_model + lo, A64_MEM + lo, hi - lo);
     memcpy(dirty_model, a64_dirty, sizeof a64_dirty);
     memcpy(A64_MEM + lo, before + lo, hi - lo);
-    memset(a64_dirty, 0, sizeof a64_dirty);
+    memset(a64_dirty, 0, sizeof a64_dirty); memset(a64_dirty_sum, 0, sizeof a64_dirty_sum);
     Ctx c;
     for (int i = 0; i < 32; i++) c.x[i] = 0x5a5a5a5a00000000ull | (uint64_t)i;
     c.x[0] = a0, c.x[1] = a1, c.x[2] = a2;
@@ -334,6 +335,11 @@ static void one(int f, uint64_t a0, uint64_t a1, uint64_t a2) {
         FAIL("%s(%#llx, %#llx, %#llx): page %#zx marked %d, the lifted stores' %d", NAME[f], (unsigned long long)a0,
              (unsigned long long)a1, (unsigned long long)a2, p, a64_dirty[p], dirty_model[p]);
     }
+    /* (a page marked with its chunk's summary clear is a mark the collection skips: stale data on the GPU) */
+    for (uint64_t p = 0; p < A64_DIRTY_PAGES; p++)
+        if (a64_dirty[p] && !a64_dirty_sum[p >> 8])
+            FAIL("%s(%#llx, %#llx, %#llx): page %#llx marked, its chunk's summary clear", NAME[f], (unsigned long long)a0,
+                 (unsigned long long)a1, (unsigned long long)a2, (unsigned long long)p);
     if (early != early0) FAIL("%s(%#llx, %#llx, %#llx): marked before its data was written", NAME[f], (unsigned long long)a0,
                               (unsigned long long)a1, (unsigned long long)a2);
     cases++;

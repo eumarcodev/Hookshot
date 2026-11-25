@@ -368,6 +368,7 @@ DRIVER = r"""
 #include "a64.h"
 uint8_t guest_mem[1 << 16];
 uint8_t a64_dirty[A64_DIRTY_PAGES];
+uint8_t a64_dirty_sum[A64_DIRTY_PAGES >> 8];   /* (the marks' chunk summary, nx2/rtgen.py A64_MARK) */
 void FN_A(Ctx *A64_NOESC c);
 void FN_B(Ctx *A64_NOESC c);
 static uint64_t log_[4096]; static int nlog, polls, resumes;
