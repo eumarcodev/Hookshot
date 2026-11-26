@@ -245,6 +245,7 @@ SW(HOS_SLOW_FRAMES_EVERY_MS, diag, int, "4", "The slow-frame recorder's sampling
 SW(HOS_SLOW_FRAMES_MAX, diag, int, "40", "The most slow frames the recorder writes in a run.")
 SW(HOS_SLOW_FRAME_MS, diag, int, "50", "How long a frame must take, in ms, for the slow-frame recorder to write it out.")
 SW(HOS_SPIN_ALWAYS, kill, bool, "adaptive: an object whose spins keep missing is spun on 1 time in 32", "Spins before every sleep on every object, without the adaptive back-off.")
+SW(HOS_SPIN_LEARN, kill, bool, "on: a wait spins 4 times as long as its object's spins took to see their flag (at least 2 us, at most HOS_SPIN_US / HOS_SPIN_OTHER_US)", "=0: every wait spins the whole HOS_SPIN_US / HOS_SPIN_OTHER_US, as before; HOS_AB may flip it.")
 SW(HOS_SPIN_OTHER_US, hw, int, "5 us with more logical processors than the short-sleep limit, else HOS_SPIN_US's", "Sets the spin before a wait sleeps on threads other than the frame's serial ones, in us (never above HOS_SPIN_US).")
 SW(HOS_SPIN_US, tune, int, "20 us", "Sets the spin before a wait sleeps on the frame's serial threads, in us (0: no spin).")
 SW(HOS_STATS_AFTER, diag, int, "unset: the host call statistics come at exit only", "With HOS_HOSTCALL_STATS=1, prints the host call counts and last calls after that many seconds.")

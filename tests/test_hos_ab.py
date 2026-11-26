@@ -339,6 +339,9 @@ WIRED = {
     "HOS_OOT_BARRIER_WAIT": "host/oot_barrier.c",
     # (read at each nn::os::YieldThread; nothing is kept between two yields)
     "HOS_OS_YIELD": "host/hos_thread.c",
+    # (read at each spin before a wait sleeps; what the objects learnt is kept on both sides, and a spin that is too short
+    # or too long only changes how soon its waiter sleeps, never what it waits for)
+    "HOS_SPIN_LEARN": "host/nn_os_sync.c",
 }
 
 

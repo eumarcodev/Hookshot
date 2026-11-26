@@ -100,7 +100,9 @@ def main():
     check("__atomic_store_n(&t->serial, serial_name(t->name), __ATOMIC_RELAXED);" in src, "hos_thread_set_name no longer sets the thread's serial flag")
     sync = (ROOT / "host" / "nn_os_sync.c").read_text(encoding="utf-8")
     svc = (ROOT / "host" / "hos_svc.c").read_text(encoding="utf-8")
-    check(sync.count("hos_now_ns() + hos_spin_ns()") == 2 and "if (hos_spin_ns() <= 0) return 0;" in sync,
+    # (HOS_SPIN_LEARN: both spins run for spin_limit_ns, which is never more than hos_spin_ns: tests/test_spin_learn.py)
+    check(sync.count("const int64_t limit = spin_limit_ns(o), start = hos_now_ns(), end = start + limit;") == 2
+          and "const int64_t whole = hos_spin_ns();" in sync and "if (hos_spin_ns() <= 0) return 0;" in sync,
           "nn_os_sync.c's spins no longer take their length from hos_spin_ns")
     check("const int64_t limit = hos_spin_ns();" in svc, "hos_svc.c's mutex spin no longer takes its length from hos_spin_ns")
     check("HOS_SPIN_US" not in sync and "HOS_SPIN_US" not in svc, "a spin reads HOS_SPIN_US by itself again")

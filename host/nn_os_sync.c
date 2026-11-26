@@ -61,6 +61,7 @@ typedef struct Obj {
     int nlinks, caplinks;
     struct Obj *mw;    /* holder -> the multi-wait it is linked to */
     int spin_misses, spin_waits;
+    int spin_hit_ns;     /* (HOS_SPIN_LEARN: how long its spins take to see the flag, smoothed; 0: not known) */
     int64_t sig_ns;      /* (HOS_WAKE_LAT: when it was last signaled / sent to) */
     struct Obj *spare;   /* (on the spare list: see spares) */
 } Obj;
@@ -487,24 +488,55 @@ static int spin_begin(Obj *o, int *misses) {
     *misses = __atomic_load_n(&o->spin_misses, __ATOMIC_RELAXED);
     return !(adaptive && *misses >= 4 && (__atomic_add_fetch(&o->spin_waits, 1, __ATOMIC_RELAXED) & 31));
 }
-static void spin_end(Obj *o, int misses, int ok) {
-    if (ok) __atomic_store_n(&o->spin_misses, 0, __ATOMIC_RELAXED);
-    else if (misses < 4) __atomic_store_n(&o->spin_misses, misses + 1, __ATOMIC_RELAXED);
+enum { SPIN_LEARN_MARGIN = 4, SPIN_LEARN_FLOOR_NS = 2000 };
+/* took: how long a spin that saw its flag spun, in ns; -1: it ran out (limit: what it was allowed). HOS_SPIN_LEARN's part:
+   a hit moves the object's spin_hit_ns a quarter of the way to what it took; a miss lets the next spin run half as long
+   again as this one did, and once that would reach the thread's whole spin the object is not known any more (0: the whole spin) */
+static void spin_end(Obj *o, int misses, int64_t took, int64_t limit) {
+    const int h = __atomic_load_n(&o->spin_hit_ns, __ATOMIC_RELAXED);
+    if (took >= 0) {
+        __atomic_store_n(&o->spin_misses, 0, __ATOMIC_RELAXED);
+        const int64_t t = took < 1 ? 1 : took > limit ? limit : took;
+        __atomic_store_n(&o->spin_hit_ns, (int)(h ? (3 * (int64_t)h + t) / 4 : t), __ATOMIC_RELAXED);
+        return;
+    }
+    if (misses < 4) __atomic_store_n(&o->spin_misses, misses + 1, __ATOMIC_RELAXED);
+    if (h) {
+        const int64_t up = (int64_t)h + h / 2 + 1, from_limit = limit * 3 / (2 * SPIN_LEARN_MARGIN);
+        const int64_t g = up > from_limit ? up : from_limit;
+        __atomic_store_n(&o->spin_hit_ns, g * SPIN_LEARN_MARGIN >= hos_spin_ns() ? 0 : (int)g, __ATOMIC_RELAXED);
+    }
+}
+/* How long this wait may spin (HOS_SPIN_LEARN, on by default): SPIN_LEARN_MARGIN times what the object's spins took to see
+   their flag (spin_hit_ns), at least SPIN_LEARN_FLOOR_NS, at most the thread's whole spin (hos_spin_ns); the whole spin
+   while that is not known. A waiter woken after its spin ran out pays a sleep and a wake (6.6-8.4 us, HOS_WAKE_LAT), so a
+   spin is worth what it catches: a spin that sees the flag within 1 us did not need the other 4 or 19. HOS_SPIN_LEARN=0:
+   the whole spin every time, as before; HOS_AB may flip it (what is learnt is kept either way) */
+static int spin_learn = -1;   /* (HOS_SPIN_LEARN, read at the first spin; racing first readers store the same value) */
+static int64_t spin_limit_ns(Obj *o) {
+    const int64_t whole = hos_spin_ns();
+    int learn = __atomic_load_n(&spin_learn, __ATOMIC_RELAXED);
+    if (learn < 0) __atomic_store_n(&spin_learn, learn = env_on_or("HOS_SPIN_LEARN", 1) ? 1 : 0, __ATOMIC_RELAXED);
+    if (!hos_ab_value("HOS_SPIN_LEARN", learn)) return whole;
+    const int64_t h = __atomic_load_n(&o->spin_hit_ns, __ATOMIC_RELAXED);
+    if (!h) return whole;
+    const int64_t l = h * SPIN_LEARN_MARGIN < SPIN_LEARN_FLOOR_NS ? SPIN_LEARN_FLOOR_NS : h * SPIN_LEARN_MARGIN;
+    return l < whole ? l : whole;
 }
 static void spin_until_set(Obj *o, volatile int *flag) {
     int misses;
     if (__atomic_load_n(flag, __ATOMIC_RELAXED) > 0 || !spin_begin(o, &misses)) return;
-    const int64_t end = hos_now_ns() + hos_spin_ns();
+    const int64_t limit = spin_limit_ns(o), start = hos_now_ns(), end = start + limit;
     for (;;) {
         for (int i = 0; i < 16; i++) {
             if (__atomic_load_n(flag, __ATOMIC_RELAXED) > 0) {
-                spin_end(o, misses, 1);
+                spin_end(o, misses, hos_now_ns() - start, limit);
                 return;
             }
             _mm_pause();
         }
         if (hos_now_ns() >= end) {
-            spin_end(o, misses, 0);
+            spin_end(o, misses, -1, limit);
             return;
         }
     }
@@ -512,17 +544,17 @@ static void spin_until_set(Obj *o, volatile int *flag) {
 static void spin_until_free(Obj *o) {
     int misses;
     if (!__atomic_load_n(&o->owner, __ATOMIC_RELAXED) || !spin_begin(o, &misses)) return;
-    const int64_t end = hos_now_ns() + hos_spin_ns();
+    const int64_t limit = spin_limit_ns(o), start = hos_now_ns(), end = start + limit;
     for (;;) {
         for (int i = 0; i < 16; i++) {
             if (!__atomic_load_n(&o->owner, __ATOMIC_RELAXED)) {
-                spin_end(o, misses, 1);
+                spin_end(o, misses, hos_now_ns() - start, limit);
                 return;
             }
             _mm_pause();
         }
         if (hos_now_ns() >= end) {
-            spin_end(o, misses, 0);
+            spin_end(o, misses, -1, limit);
             return;
         }
     }
