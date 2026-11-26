@@ -4566,12 +4566,33 @@ uint64_t replay_pin_mask() {
 }
 thread_local int replay_pin_depth = 0;
 thread_local DWORD_PTR replay_pin_prev = 0;
+// RX_VK_PIN_MIN_US (50; 0: every replay, as before): a replay is not moved when the last one from the same place on this
+// thread (a submit, a present, a queue's run) took less than that. The move is two SetThreadAffinityMask calls and the thread's
+// trip to another core and back (1.7-1.9 % of a core on the serial threads: docs/cpu-profile.md), more than a short replay
+// gains from the core. Each replay is timed, moved or not, so a place whose replays grow is moved again from its next one.
 struct ReplayPin {
+    enum Site { RUN, SUBMIT, PRESENT, SITES };
+    static inline thread_local int64_t last_ns[SITES] = {INT64_MAX, INT64_MAX, INT64_MAX};   // (INT64_MAX: not timed yet)
+    static int64_t min_ns() {
+        static const int64_t v = [] {
+            const char* e = getenv("RX_VK_PIN_MIN_US");
+            const long long us = e && *e ? atoll(e) : 50;
+            return (int64_t)(us < 0 ? 0 : us > 1000000 ? 1000000 : us) * 1000;
+        }();
+        return v;
+    }
+    static int64_t now_ns() {
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
     bool counted = false;
-    ReplayPin() {
+    int site;
+    int64_t t0 = 0;
+    explicit ReplayPin(Site s = RUN) : site(s) {
         if (async_on()) return;
         counted = true;
         if (replay_pin_depth++) return;   // (the outermost one: a submit's replay inside its capture's)
+        t0 = now_ns();
+        if (last_ns[site] < min_ns()) return;   // (RX_VK_PIN_MIN_US: the last one from here was short)
         if (const uint64_t m = replay_pin_mask()) {
             replay_pin_prev = SetThreadAffinityMask(GetCurrentThread(), (DWORD_PTR)m);
             static std::atomic<bool> told{false};   // (refused: a mask outside the process's. Said once, not every replay)
@@ -4582,6 +4603,7 @@ struct ReplayPin {
     }
     ~ReplayPin() {
         if (!counted || --replay_pin_depth) return;
+        last_ns[site] = now_ns() - t0;
         if (replay_pin_prev) SetThreadAffinityMask(GetCurrentThread(), replay_pin_prev), replay_pin_prev = 0;
     }
     ReplayPin(const ReplayPin&) = delete;
@@ -9441,7 +9463,7 @@ void submit_q(const uint64_t* handles, int n, uint64_t queue) {
     if (!async_on()) {
         std::lock_guard order(sync_order_mu);
         tl_ev("submit-locked");
-        ReplayPin pin;   // (the capture and the replay on the replay's core)
+        ReplayPin pin{ReplayPin::SUBMIT};   // (the capture and the replay on the replay's core)
         // (the replay here is on the submitting thread, but the game's other threads go on writing their next frames: a pool
         // synced from guest memory later in the frame read those. The capture is taken here too)
         // (EvilOOT) on by default: without it every mirror sync read guest memory as it was at the replay, the game's later
@@ -9500,7 +9522,7 @@ void present(const nvn_tex* t, const int crop[4]) {
     FpsRender fr;
     if (!async_on()) {
         std::lock_guard order(sync_order_mu);
-        ReplayPin pin;   // (the frame's last replays and the present on the replay's core)
+        ReplayPin pin{ReplayPin::PRESENT};   // (the frame's last replays and the present on the replay's core)
         if (sync_waits_on()) {
             drain(0);   // (the frame's work whole before it is shown)
             update_blocked();

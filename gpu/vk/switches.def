@@ -801,6 +801,7 @@ SW(RX_VK_PEEK_PROG, diag, string, "unset: nothing logged", "Logs the first words
 SW(RX_VK_PER_QUEUE_FENCES, kill, bool, "on: a fence waits for its own queue's work", "=0 makes a fence wait for every queue's work up to it, stopped work forced on, as before.")
 SW(RX_VK_PGO_FILE, diag, string, "no profile written (and read only by a renderer built with RX_VK_PGO=gen)", "In a counting (RX_VK_PGO=gen) renderer, names the file its branch counters are written to; <file>.reset clears them.")
 GONE(RX_VK_PIN_ALL, "2026-11-17", "it does nothing: RX_VK_COMPUTE_PIN says which compute programs are held to 32 lanes")
+SW(RX_VK_PIN_MIN_US, tune, int, "50 us", "A synchronous replay is not moved to the reserved core when the last one from the same place on its thread took less than this many us (0: every replay is moved, as before).")
 SW(RX_VK_PIPELINE_TRACE, diag, bool, "off", "Logs program keys before each graphics pipeline build and background compute compile, to name a build that does not return.")
 SW(RX_VK_PIPE_BY_PROGRAM, kill, bool, "on: a pipeline made for one program object is not taken by another with the same key", "=0 shares pipelines by key alone, as before (a device lost near water on NVIDIA).")
 SW(RX_VK_PIPE_SKIP, kill, enum, "1: translation is waited for; a pending pipeline is skipped only for draws that write no memory on earlier...", "0 always waits for pipelines too; 2 restores the old skip of untranslated draws on persistent targets.")

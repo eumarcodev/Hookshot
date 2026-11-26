@@ -34,6 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 FIXTURE = r'''
 #include <atomic>
+#include <chrono>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
@@ -327,9 +328,20 @@ int main() {
         CHECK(M.thread == 0x0FFF);
         CHECK(vk::count("NOT kept") == 1);
         vk::lines.clear(); vk::reserved_now = 0x0C00;
+        vk::ReplayPin::last_ns[vk::ReplayPin::RUN] = INT64_MAX;   // (not timed yet: moved)
         { vk::ReplayPin c; CHECK(M.thread == 0x0C00); }
         CHECK(M.thread == 0x0FFF);
         CHECK(!vk::said("NOT kept"));
+        // RX_VK_PIN_MIN_US (50 us): c took less, so the next one from the same place stays where it is; one from another
+        // place, not timed yet, is moved; one after a long one is moved again
+        CHECK(vk::ReplayPin::last_ns[vk::ReplayPin::RUN] < 50000);
+        { vk::ReplayPin d; CHECK(M.thread == 0x0FFF); }
+        { vk::ReplayPin e{vk::ReplayPin::PRESENT}; CHECK(M.thread == 0x0C00); }
+        CHECK(M.thread == 0x0FFF);
+        vk::ReplayPin::last_ns[vk::ReplayPin::RUN] = 50000;
+        { vk::ReplayPin f; CHECK(M.thread == 0x0C00); { vk::ReplayPin inner{vk::ReplayPin::SUBMIT}; CHECK(M.thread == 0x0C00); } }
+        CHECK(M.thread == 0x0FFF);
+        CHECK(vk::ReplayPin::last_ns[vk::ReplayPin::SUBMIT] == INT64_MAX);   // (an inner one is not timed: the outermost is)
     }
     std::printf("PASS: %d reserved cores, each one the process may run on wholly (or none), the same as before without a "
                 "mask; the replay thread's log says where it really runs\n", cases);
@@ -408,6 +420,11 @@ def main():
                 fixture(hos, mutate(replay, 'if (!SetThreadAffinityMask(GetCurrentThread(), (DWORD_PTR)use)) {',
                                     'if ((SetThreadAffinityMask(GetCurrentThread(), (DWORD_PTR)use), false)) {',
                                     'pin not checked')),
+            "a short replay's next one moved all the same (RX_VK_PIN_MIN_US not kept)":
+                fixture(hos, mutate(replay, 'if (last_ns[site] < min_ns()) return;', '', 'short replays moved')),
+            "every place timed as one (a short submit leaves the present where it is)":
+                fixture(hos, mutate(replay, 'last_ns[site] = now_ns() - t0;',
+                                    'for (auto& l : last_ns) l = now_ns() - t0;', 'places timed as one')),
         }
         for i, (what, text) in enumerate(broken.items()):
             result = run(args.cxx, text, tmp, 'broken%d' % i)
