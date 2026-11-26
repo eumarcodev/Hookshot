@@ -334,6 +334,9 @@ BROKEN_C = [
 ]
 # (the switches wired to hos_ab_value, one a line in name order, each with why a flip between two of its reads is safe)
 WIRED = {
+    # (read at each EndRecording; a handed-over segment and a copy are the same kind of block, freed the same way, and the
+    # command buffer's next segment is made either way)
+    "HOS_NVN_REC_HANDOVER": "host/nvn_native.c",
     # (read at each barrier sleep and each OR's wake; the game's loop looks at its masks again after a wait or a sleep alike,
     # and a wake skipped while off costs a waiter its 1 ms timeout at most)
     "HOS_OOT_BARRIER_WAIT": "host/oot_barrier.c",

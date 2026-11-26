@@ -39,8 +39,9 @@ def main():
     block = helpers.block
     nvn = (ROOT / "host/nvn_native.c").read_text(encoding="utf-8")
     hos = (ROOT / "host/hos.h").read_text(encoding="utf-8")
-    start = nvn.index("typedef struct { uint64_t owner; uint8_t *seg, *cur, *end; uint64_t extra; } cmd_rec;")
-    table_decls = nvn[start:nvn.index("static cmd_rec *cmd_slot(", start)]
+    typedef = "typedef struct { uint64_t owner; uint8_t *seg, *cur, *end; uint64_t extra, hint; } cmd_rec;"
+    start = nvn.index("#define CMD_CHUNK_BITS", nvn.index(typedef))   # (the segments' sizes between them: pool code)
+    table_decls = typedef + "\n" + nvn[start:nvn.index("static cmd_rec *cmd_slot(", start)]
     live_decls_start = nvn.index("static uint64_t *live_handles;")
     live_decls = nvn[live_decls_start:nvn.index("static void live_handle_add(", live_decls_start)]
     pieces = [
@@ -92,6 +93,8 @@ static int pool_off(void) { return 0; }
 static unsigned pool_class(size_t n) { (void)n; return 0; }
 static int puts_count;
 static void pool_put(void *b, unsigned c) { (void)c; free(b); puts_count++; }
+#define SEG_PREFIX 24u   /* (a segment's block starts SEG_PREFIX bytes before it: nvn_native.c's seg_class) */
+static unsigned seg_class(const void *r) { (void)r; return 0; }
 /* (host/mkw_glue.c's: never NULL; tests/test_host_alloc_wait.py checks their wait and notice) */
 static void *hos_xmalloc(size_t s, const char *what) { void *p = malloc(s); if (!p) { fprintf(stderr, "%s\n", what); exit(3); } return p; }
 static void *hos_xcalloc(size_t n, size_t s, const char *what) { void *p = calloc(n, s); if (!p) { fprintf(stderr, "%s\n", what); exit(3); } return p; }
@@ -126,7 +129,7 @@ int main(void) {
     nvn_cmd *a = (nvn_cmd *)GP(0x4000), *b = (nvn_cmd *)GP(0x5000);
     cmd_rec *ra = cmd_adopt(a), *rb = cmd_adopt(b);
     require(ra != rb && a->slot && b->slot && a->slot != b->slot, "two command buffers share a slot");
-    ra->seg = ra->cur = malloc(64), ra->end = ra->seg + 64;
+    ra->seg = ra->cur = (uint8_t *)malloc(SEG_PREFIX + 64) + SEG_PREFIX, ra->end = ra->seg + 64;
     require(cmd_host(a) == ra, "a command buffer lost its own slot");
     const uint32_t a_slot = a->slot;
     b->slot = a_slot;   /* b's memory names a's slot */

@@ -1369,7 +1369,18 @@ static void pool_put(void *b, unsigned cls) {
    that is not the object's own is not used: the object gets a new slot, as an object never initialized does. Slots are
    in chunks that are never freed, so a lookup needs no lock (a command buffer records on one thread at a time). */
 /* (extra: bytes of the recording no accounting counts, the HL_UBO_CHECK records: a CallCommands of it leaves them out) */
-typedef struct { uint64_t owner; uint8_t *seg, *cur, *end; uint64_t extra; } cmd_rec;
+/* (hint: the bytes its recordings need, the last one's or a little less than a bigger one before it, which a new segment is
+   sized by: seg_class_for) */
+typedef struct { uint64_t owner; uint8_t *seg, *cur, *end; uint64_t extra, hint; } cmd_rec;
+/* (hookshot) A segment is a pool block whose first SEG_PREFIX bytes are kept for a recording copy's prefix (copy_prefix), so
+   EndRecording can hand the block over as the recording's copy instead of copying it (end_recording_copy) */
+#define SEG_PREFIX 24u
+static unsigned seg_class(const cmd_rec *r) {   /* (the segment's block's pool class) */
+    return pool_off() ? POOL_MAX + 1 : pool_class((size_t)(r->end - r->seg) + SEG_PREFIX);
+}
+static unsigned seg_class_for(uint64_t hint) {   /* (the class of a new segment for a recording of hint bytes) */
+    return pool_class((size_t)hint + OP_RESERVE + SEG_PREFIX);
+}
 #define CMD_CHUNK_BITS 10
 #define CMD_CHUNKS 4096u                     /* (4M command buffers at once) */
 static cmd_rec *volatile cmd_chunks[CMD_CHUNKS];
@@ -1415,7 +1426,7 @@ static void cmd_release(nvn_cmd *o) {   /* the object's slot and recording buffe
     if (r->seg) {
         InterlockedAdd64(&seg_bytes, -(LONG64)(r->end - r->seg));
         InterlockedDecrement64(&seg_count);
-        pool_put(r->seg, pool_off() ? POOL_MAX + 1 : pool_class((size_t)(r->end - r->seg)));
+        pool_put(r->seg - SEG_PREFIX, seg_class(r));
     }
     AcquireSRWLockExclusive(&cmd_lock);
     memset(r, 0, sizeof *r);
@@ -1454,20 +1465,23 @@ static void put_hdr(uint8_t *p, uint32_t op, uint32_t size) { nvn_op_hdr h = {op
 static void cmd_reserve_rec(cmd_rec *o, size_t need) {
     if (o->seg && need + OP_RESERVE <= (size_t)(o->end - o->cur)) return;
     const size_t used = o->seg ? (size_t)(o->cur - o->seg) : 0;
-    size_t cap = o->seg ? (size_t)(o->end - o->seg) : 0;
-    if (!cap) cap = 64 << 10;
-    while (used + need + OP_RESERVE > cap) cap *= 2;
+    size_t cap = o->seg ? (size_t)(o->end - o->seg) + SEG_PREFIX : 0;   /* (the block's bytes, its prefix's too) */
+    /* (a new segment: the size the last recording ended on this command buffer needed, else 64 KiB. A segment handed over
+       by EndRecording leaves none, and a command buffer records much the same each frame) */
+    if (!cap) cap = o->hint ? (size_t)1 << seg_class_for(o->hint) : 64 << 10;
+    while (used + need + OP_RESERVE + SEG_PREFIX > cap) cap *= 2;
     unsigned cls;
     uint8_t *b = (uint8_t *)pool_get(cap, &cls, "native NVN: recording buffer");
+    if (cls <= POOL_MAX) cap = (size_t)1 << cls;   /* (the whole block: seg_class reads its class back from its size) */
     if (o->seg) {
-        memcpy(b, o->seg, used);
+        memcpy(b + SEG_PREFIX, o->seg, used);
         InterlockedAdd64(&seg_bytes, -(LONG64)(o->end - o->seg));
-        pool_put(o->seg, pool_off() ? POOL_MAX + 1 : pool_class((size_t)(o->end - o->seg)));
+        pool_put(o->seg - SEG_PREFIX, seg_class(o));
     } else {
         InterlockedIncrement64(&seg_count);
     }
-    InterlockedAdd64(&seg_bytes, (LONG64)cap);
-    o->seg = b, o->cur = b + used, o->end = b + cap;
+    InterlockedAdd64(&seg_bytes, (LONG64)(cap - SEG_PREFIX));
+    o->seg = b + SEG_PREFIX, o->cur = o->seg + used, o->end = b + cap;
 }
 static uint8_t *cmd_alloc(nvn_cmd *o, uint32_t size) {
     size = (size + 7) & ~7u;
@@ -1510,6 +1524,7 @@ static SRWLOCK copy_lock = SRWLOCK_INIT;
 static volatile LONG64 copy_bytes;
 #define COPY_MAGIC 0x59504f43444d43ull   /* "CMDCOPY" */
 typedef struct { uint64_t magic, bytes, cls; } copy_prefix;   /* (cls: its pool class) */
+_Static_assert(sizeof(copy_prefix) == SEG_PREFIX, "a segment keeps room for a copy's prefix");
 /* released copies wait until the replay passed every submit made before their release (the replay runs behind) */
 typedef struct { copy_prefix *p; uint64_t after; } dead_copy;
 static dead_copy *dead;
@@ -1767,6 +1782,37 @@ static uint8_t *flatten(const uint8_t *p, size_t n) {
     InterlockedAdd64(&copy_bytes, (LONG64)pre->bytes);
     return out + sizeof(copy_prefix);
 }
+/* (hookshot) The recording's copy at EndRecording: the segment itself when its pool block is the class a copy's block would
+   be (the same memory as a copy, no bytes moved), its prefix written in the bytes the segment kept for it. The command buffer
+   then has no segment, and its next recording gets one sized by its recordings (cmd_reserve_rec, hint). Else one copy, as
+   before (NVN_NO_POOL, or a block bigger than the copy needs: a 64 KiB segment is not kept for a 1 KiB recording, which may
+   live as long as its control memory), and a segment of another class than its recordings need goes back to the pool, so
+   that the next one is of theirs. HOS_NVN_REC_HANDOVER=0: always copied, the segment kept (HOS_AB may flip it) */
+static uint8_t *end_recording_copy(cmd_rec *r) {
+    const size_t n = (size_t)(r->cur - r->seg);
+    r->hint = n > r->hint - r->hint / 4 ? n : r->hint - r->hint / 4;   /* (a smaller one between two big ones: still big) */
+    static int on = -1;
+    if (on < 0) on = env_on_or("HOS_NVN_REC_HANDOVER", 1) ? 1 : 0;
+    const unsigned cls = seg_class(r);
+    if (cls > POOL_MAX || !hos_ab_value("HOS_NVN_REC_HANDOVER", on)) return flatten(r->seg, n);
+    uint8_t *copy;
+    if (pool_class(SEG_PREFIX + n) == cls) {
+        copy_prefix *pre = (copy_prefix *)(r->seg - SEG_PREFIX);
+        pre->cls = cls;
+        pre->magic = COPY_MAGIC;
+        pre->bytes = SEG_PREFIX + n;
+        InterlockedAdd64(&copy_bytes, (LONG64)pre->bytes);
+        copy = r->seg;
+    } else {
+        copy = flatten(r->seg, n);
+        if (cls == seg_class_for(r->hint)) return copy;   /* (the size its recordings need: kept) */
+        pool_put(r->seg - SEG_PREFIX, cls);
+    }
+    InterlockedAdd64(&seg_bytes, -(LONG64)(r->end - r->seg));
+    InterlockedDecrement64(&seg_count);
+    r->seg = r->cur = r->end = NULL;
+    return copy;
+}
 /* (the watches below) the guest's call chain, by frame pointers: "lr < caller < ..." */
 static void guest_chain(Ctx *c, char *b, size_t cap) {
     uint64_t lr = c->x[30], fp = c->x[29];
@@ -1797,8 +1843,7 @@ NV(nvnCommandBufferEndRecording) {
     put_hdr(p, NOP_END, 8);
     o->hw_used -= 8;
     o->recording = 0;
-    const cmd_rec *r = cmd_host(o);
-    uint8_t *copy = flatten(r->seg, (size_t)(r->cur - r->seg));
+    uint8_t *copy = end_recording_copy(cmd_host(o));
     /* the copy is tied to the control memory position the console driver's descriptor would take */
     const uint64_t at = o->ctl + (o->ctl_used < o->ctl_size ? o->ctl_used : 0);
     o->ctl_used += 64;

@@ -165,6 +165,7 @@ SW(HOS_NVN_HOLD, attempt, bool, "off: command buffers go to the replay at the su
 SW(HOS_NVN_LOG_OBJECTS, diag, bool, "off", "Logs NVN object creation and setup calls.")
 SW(HOS_NVN_LOG_VMAP, diag, string, "off", "Logs virtual pools and the mappings into pools from the given GPU address (hex) up.")
 SW(HOS_NVN_NO_SWEEP, kill, bool, "sweep on: overwritten command recordings' copies are freed in slices", "Never sweeps the copies of command recordings the game has overwritten.")
+SW(HOS_NVN_REC_HANDOVER, kill, bool, "on: a recording whose segment is the size its copy would be is handed over as the copy, not copied", "=0: every recording is copied at EndRecording, as before; HOS_AB may flip it.")
 SW(HOS_NVN_REC_SHIFT, tune, int, "16", "The page shift (12-24) the command recordings' hash buckets are keyed by.")
 SW(HOS_NVN_STRICT, diag, bool, "off: an unimplemented NVN call is logged once and answered 0", "Stops the game at the first NVN call that is not implemented.")
 SW(HOS_NVN_SYNC_BLOCK, attempt, bool, "off: nvnSyncWait honours the game's timeout", "An nvnSyncWait poll waits for the GPU without a timeout.")
