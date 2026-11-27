@@ -28,7 +28,10 @@ static int64_t clock_ns;
 static int keep_dead;
 static int64_t hos_now_ns(void){return clock_ns;}
 static int env_on(const char *s){return !strcmp(s,"HOS_KEEP_DEAD_OBJECTS")&&keep_dead;}
+/* (HOS_MUTEX_IX off: the fixture's mutex keys are not guest memory, and it checks the lookup table's retirement) */
+static int env_on_or(const char *s, int dflt){return strcmp(s,"HOS_MUTEX_IX") ? dflt : 0;}
 static void hos_vcore_checkpoint(void){}
+static int hos_ab_value(const char *name, int normal){(void)name;return normal;}   /* (no A/B here) */
 #define GP(a) ((void *)(uintptr_t)(a))   /* (the mutex index's guest pointer: HOS_MUTEX_IX is off here, never read) */
 static int assertions,failures;
 static void check(int ok,const char *why){assertions++;if(!ok){failures++;fprintf(stderr,"FAIL %s\n",why);}}

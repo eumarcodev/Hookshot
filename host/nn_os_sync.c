@@ -252,10 +252,11 @@ static int mx_ix_on(void);
 static Obj *obj_mutex_ix(uint64_t key);
 static Obj *obj(uint64_t key, int kind) {
     hos_vcore_checkpoint();   /* (virtual cores: every nn::os call, where a better waiter takes the core) */
-    if (kind == K_MUTEX && key && mx_ix_on()) return obj_mutex_ix(key);
+    if (kind == K_MUTEX && key && hos_ab_value("HOS_MUTEX_IX", mx_ix_on())) return obj_mutex_ix(key);
     return obj_nockpt(key, kind);
 }
-/* (a fork's code, GPL-3.0; HOS_MUTEX_IX=1, off by default) A mutex's host object found by an index kept in its
+/* (a fork's code, GPL-3.0; on by default, HOS_MUTEX_IX=0 turns it off: +6 to +14 % fps CPU-bound in Kokiri Forest and
+   Hyrule Field, RX 6600 XT / Ryzen 7 5700G, PR #25) A mutex's host object found by an index kept in its
    nn::os::MutexType + 8, the SDK's nesting-count word, unused here (the count is Obj::count). Checked against Obj::key and
    Obj::kind, so a copied, zeroed or reused mutex falls back to obj_nockpt and is numbered again. Only for obj's nn::os
    calls: obj_nockpt, used under host locks, stays as it was */
@@ -263,9 +264,12 @@ static Obj *obj(uint64_t key, int kind) {
 #define MX_IX_CAP (1u << 20)
 static Obj *mx_objs[MX_IX_CAP];
 static volatile long mx_next = 1;
+/* (an index has been written into a guest mutex: FinalizeMutex clears its word from then on, whichever side of an A/B
+   (HOS_AB=HOS_MUTEX_IX=1) the run is on; a run that never takes this path writes nothing there) */
+static int mx_ix_used;
 static int mx_ix_on(void) {
     static int v = -1;
-    if (v < 0) v = env_on("HOS_MUTEX_IX");
+    if (v < 0) v = env_on_or("HOS_MUTEX_IX", 1) ? 1 : 0;
     return v;
 }
 static Obj *obj_mutex_ix(uint64_t key) {
@@ -285,6 +289,7 @@ static Obj *obj_mutex_ix(uint64_t key) {
             uint32_t none = 0;
             if (__atomic_compare_exchange_n(&o->ix, &none, (uint32_t)n, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
                 __atomic_store_n(&mx_objs[n], o, __ATOMIC_RELEASE);
+                if (!__atomic_load_n(&mx_ix_used, __ATOMIC_RELAXED)) __atomic_store_n(&mx_ix_used, 1, __ATOMIC_RELAXED);
                 mine = (uint32_t)n;
             } else {
                 mine = none;
@@ -740,7 +745,8 @@ HLE(_ZN2nn2os15InitializeMutexEPNS0_9MutexTypeEbi) {
 }
 HLE(_ZN2nn2os13FinalizeMutexEPNS0_9MutexTypeE) {
     if (watched(ARG(0))) watch_log("finalize", ARG(0), 0, c, NULL);
-    if (ARG(0) && mx_ix_on()) __atomic_store_n((uint32_t *)GP(ARG(0) + MX_IX_OFFSET), 0u, __ATOMIC_RELAXED);
+    if (ARG(0) && __atomic_load_n(&mx_ix_used, __ATOMIC_RELAXED))
+        __atomic_store_n((uint32_t *)GP(ARG(0) + MX_IX_OFFSET), 0u, __ATOMIC_RELAXED);
     drop(ARG(0));
 }
 HLE(_ZN2nn2os9LockMutexEPNS0_9MutexTypeE) {

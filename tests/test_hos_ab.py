@@ -334,6 +334,9 @@ BROKEN_C = [
 ]
 # (the switches wired to hos_ab_value, one a line in name order, each with why a flip between two of its reads is safe)
 WIRED = {
+    # (read at each guest mutex's lookup; either side finds the same host object, by its index (checked against its key and
+    # kind) or by the table, and an index left in a mutex's word while off is checked again before it is used)
+    "HOS_MUTEX_IX": "host/nn_os_sync.c",
     # (read at each barrier sleep and each OR's wake; the game's loop looks at its masks again after a wait or a sleep alike,
     # and a wake skipped while off costs a waiter its 1 ms timeout at most)
     "HOS_OOT_BARRIER_WAIT": "host/oot_barrier.c",

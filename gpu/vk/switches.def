@@ -138,7 +138,7 @@ SW(HOS_MOUSE_NATIVE, player, bool, "the Insert menu's Mouse camera row (off)", "
 SW(HOS_MOUSE_SENS, player, float, "the menu's mouse sensitivity (or user/mouse_sens.txt, moved into the menu once)", "Sets the mouse sensitivity and stops the old mouse_sens.txt being moved into the menu.")
 SW(HOS_MOUSE_TEST, diag, int, "0: the real mouse", "A test's mouse: captured, moving to the right at that many counts a second.")
 SW(HOS_MOVIE_PACE, kill, bool, "on: a 60 FPS cap is raised for a movie's pictures", "=0 leaves the pacing at the frame rate cap while a movie plays.")
-SW(HOS_MUTEX_IX, attempt, bool, "off: a mutex's host object is found in the lookup table", "=1 finds it by an index kept in the mutex's unused nesting-count word, checked against its key.")
+SW(HOS_MUTEX_IX, kill, bool, "on: a mutex's host object is found by an index kept in the mutex's unused nesting-count word, checked against its key", "=0: it is found in the lookup table, as before; HOS_AB may flip it.")
 SW(HOS_MUTEX_TRACE, diag, int, "0: off", "Logs mutex waits longer than <ms>, with the thread that held the mutex.")
 SW(HOS_MUTEX_WATCH, diag, string, "off", "Logs every operation on the mutex at that guest address (hex) and its condition variables' signals.")
 SW(HOS_MW_WAKE, kill, enum, "only changes to objects linked into a multi-wait wake WaitAny", "=all: every event, semaphore or queue change wakes every WaitAny, as before.")
